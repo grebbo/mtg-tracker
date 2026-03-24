@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifica' if game else 'Nuova' }} Partita{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-xl font-bold text-white mb-6">
+    {{ '✏️ Modifica Partita' if game else '➕ Nuova Partita' }}
+  </h1>
+
+  <form id="gameForm"
+        method="POST"
+        action="{{ url_for('main.game_edit', game_id=game.id) if game else url_for('main.game_new') }}">
+
+    <!-- ── Game meta ─────────────────────────────────────────────────── -->
+    <div class="card p-5 mb-5">
+      <h2 class="text-sm font-semibold text-slate-300 mb-4">Informazioni Partita</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label>Data</label>
+          <input type="date" name="date" required
+                 value="{{ game.date.isoformat() if game else today }}">
+        </div>
+        <div>
+          <label>Turni Totali</label>
+          <input type="number" name="total_turns" min="1" max="50"
+                 value="{{ game.total_turns or '' }}" placeholder="es. 12">
+        </div>
+        <div>
+          <label>N° Giocatori</label>
+          <select name="num_players" id="numPlayersSelect">
+            {% for n in [3,4,5] %}
+            <option value="{{ n }}"
+              {% if game and game.entries|length == n %}selected
+              {% elif not game and n == 4 %}selected{% endif %}>
+              {{ n }} giocatori
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Player slots ───────────────────────────────────────────────── -->
+    {% set existing = game.entries | sort(attribute='finish') if game else [] %}
+    {% for i in range(5) %}
+    {% set e = existing[i] if i < existing|length else none %}
+    <div class="card p-5 mb-4 player-slot" id="slot{{ i }}" {% if i >= 4 %}style="display:none"{% endif %}>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-slate-300">
+          Giocatore <span class="slot-num text-mtg-accentL">{{ i+1 }}</span>
+        </h2>
+        <span id="winnerBadge{{ i }}" class="badge hidden"
+              style="background:#14532d;color:#86efac">🏆 Vincitore</span>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+        <!-- Player -->
+        <div>
+          <label>Giocatore</label>
+          <select name="p{{ i }}_player" required>
+            <option value="">— Seleziona —</option>
+            {% for p in players %}
+            <option value="{{ p.id }}"
+              {% if e and e.player_id == p.id %}selected{% endif %}>
+              {{ p.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Commander -->
+        <div>
+          <label>Commander</label>
+          <select name="p{{ i }}_commander" required>
+            <option value="">— Seleziona —</option>
+            {% for c in commanders %}
+            <option value="{{ c.id }}"
+              {% if e and e.commander_id == c.id %}selected{% endif %}>
+              {{ c.name }} ({{ c.color_identity }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Finish -->
+        <div>
+          <label>Posizione Finale</label>
+          <select name="p{{ i }}_finish" class="finish-select" data-slot="{{ i }}" required>
+            <option value="">—</option>
+            {% for pos in range(1,6) %}
+            <option value="{{ pos }}"
+              {% if e and e.finish == pos %}selected{% endif %}>
+              {% if pos == 1 %}🏆 1° (Vincitore){% else %}{{ pos }}°{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Turn Order -->
+        <div>
+          <label>Turno di Seduta</label>
+          <select name="p{{ i }}_turn_order">
+            <option value="">—</option>
+            {% for t in range(1,6) %}
+            <option value="{{ t }}"
+              {% if e and e.turn_order == t %}selected{% endif %}>
+              {{ t }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Sol Ring -->
+        <div class="flex items-center gap-2 pt-5">
+          <input type="checkbox" name="p{{ i }}_sol_ring" id="sr{{ i }}"
+                 class="w-4 h-4 accent-amber-400"
+                 style="width:1rem;height:1rem"
+                 {% if e and e.sol_ring_t1 %}checked{% endif %}>
+          <label for="sr{{ i }}" class="mt-0 text-slate-300 cursor-pointer">Sol Ring T1</label>
+        </div>
+
+        <!-- Turn Eliminated -->
+        <div class="loser-field" id="turnElimDiv{{ i }}">
+          <label>Turno Eliminato</label>
+          <input type="number" name="p{{ i }}_turn_eliminated" min="1" max="50"
+                 value="{{ e.turn_eliminated or '' if e else '' }}" placeholder="es. 8">
+        </div>
+
+      </div>
+
+      <!-- Second row: Eliminated by, condition, notes -->
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+
+        <!-- Eliminated by -->
+        <div class="loser-field" id="elimByDiv{{ i }}">
+          <label>Eliminato Da (Commander)</label>
+          <select name="p{{ i }}_eliminated_by">
+            <option value="">—</option>
+            {% for c in commanders %}
+            <option value="{{ c.id }}"
+              {% if e and e.eliminated_by_id == c.id %}selected{% endif %}>
+              {{ c.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Victory condition (winner only) -->
+        <div class="winner-field hidden" id="victoryDiv{{ i }}">
+          <label>Win Condition</label>
+          <select name="p{{ i }}_victory_condition">
+            <option value="">—</option>
+            {% for wc in win_conditions %}
+            <option value="{{ wc }}"
+              {% if e and e.victory_condition == wc %}selected{% endif %}>
+              {{ wc }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Loss condition (loser only) -->
+        <div class="loser-field" id="lossDiv{{ i }}">
+          <label>Loss Condition</label>
+          <select name="p{{ i }}_loss_condition">
+            <option value="">—</option>
+            {% for lc in loss_conditions %}
+            <option value="{{ lc }}"
+              {% if e and e.loss_condition == lc %}selected{% endif %}>
+              {{ lc }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div class="col-span-2 md:col-span-3">
+          <label>Note (opzionale)</label>
+          <input type="text" name="p{{ i }}_notes"
+                 value="{{ e.notes or '' if e else '' }}" placeholder="Note aggiuntive...">
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="flex gap-3 justify-end mt-2">
+      <a href="{{ url_for('main.history') }}" class="btn-sm">Annulla</a>
+      <button type="submit" class="btn-primary">
+        {{ 'Salva Modifiche' if game else 'Salva Partita' }}
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+const NUM_SELECT = document.getElementById('numPlayersSelect');
+const slots = document.querySelectorAll('.player-slot');
+
+function updateSlots() {
+  const n = parseInt(NUM_SELECT.value);
+  slots.forEach((slot, i) => {
+    slot.style.display = i < n ? '' : 'none';
+    // Clear required on hidden slots
+    slot.querySelectorAll('[required]').forEach(el => {
+      el.required = i < n;
+    });
+  });
+}
+
+function applyFinishStyle(slotIdx, finishVal) {
+  const isWinner = (finishVal == 1);
+  const badge = document.getElementById(`winnerBadge${slotIdx}`);
+
+  badge.classList.toggle('hidden', !isWinner);
+
+  // winner fields
+  document.querySelectorAll(`#slot${slotIdx} .winner-field`).forEach(el => {
+    el.classList.toggle('hidden', !isWinner);
+  });
+  // loser fields
+  document.querySelectorAll(`#slot${slotIdx} .loser-field`).forEach(el => {
+    el.classList.toggle('hidden', isWinner);
+  });
+}
+
+// Init finish selects
+document.querySelectorAll('.finish-select').forEach(sel => {
+  const idx = parseInt(sel.dataset.slot);
+  applyFinishStyle(idx, sel.value);
+  sel.addEventListener('change', () => applyFinishStyle(idx, sel.value));
+});
+
+NUM_SELECT.addEventListener('change', updateSlots);
+updateSlots();
+</script>
+{% endblock %}

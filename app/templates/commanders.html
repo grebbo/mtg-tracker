@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Commander{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-xl font-bold text-white">⚔️ Commander</h1>
+  <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="btn-primary">
+    + Aggiungi Commander
+  </button>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 border-b border-mtg-border" style="background:#12151f">
+          <th class="px-4 py-3 font-medium sortable cursor-pointer select-none" data-col="0" data-type="str">Commander <span class="sort-icon"></span></th>
+          <th class="px-4 py-3 font-medium">Colori</th>
+          <th class="px-4 py-3 font-medium text-right sortable cursor-pointer select-none" data-col="2" data-type="num">Partite <span class="sort-icon"></span></th>
+          <th class="px-4 py-3 font-medium text-right sortable cursor-pointer select-none" data-col="3" data-type="num">Vittorie <span class="sort-icon"></span></th>
+          <th class="px-4 py-3 font-medium text-right sortable cursor-pointer select-none" data-col="4" data-type="num">Kill <span class="sort-icon"></span></th>
+          <th class="px-4 py-3 font-medium text-right sortable cursor-pointer select-none" data-col="5" data-type="num">Win Rate <span class="sort-icon"></span></th>
+          <th class="px-4 py-3 font-medium text-right">Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="cmdTbody" class="divide-y divide-mtg-border">
+        {% for s in stats | sort(attribute='games', reverse=True) %}
+        <tr class="hover:bg-white/[.02] transition-colors">
+          <td class="px-4 py-2.5 font-medium text-slate-200">{{ s.commander.name }}</td>
+          <td class="px-4 py-2.5">
+            <div class="flex gap-1 flex-wrap">
+              {% for ch in s.commander.color_identity %}
+              {% set colors = {'W':'#f3f4f6','U':'#3b82f6','B':'#6b7280','R':'#ef4444','G':'#22c55e'} %}
+              <span class="badge font-bold text-xs"
+                    style="background:{{ colors.get(ch, '#7c3aed') }};color:{% if ch == 'W' %}#111{% elif ch == 'B' %}#fff{% else %}#fff{% endif %}">
+                {{ ch }}
+              </span>
+              {% endfor %}
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">{{ color_names.get(s.commander.color_identity, s.commander.color_identity) }}</div>
+          </td>
+          <td class="px-4 py-2.5 text-right text-slate-300" data-val="{{ s.games }}">{{ s.games }}</td>
+          <td class="px-4 py-2.5 text-right font-semibold {% if s.wins > 0 %}text-mtg-win{% else %}text-slate-500{% endif %}" data-val="{{ s.wins }}">{{ s.wins }}</td>
+          <td class="px-4 py-2.5 text-right {% if s.kills > 0 %}text-red-400{% else %}text-slate-500{% endif %}" data-val="{{ s.kills }}">{{ s.kills }}</td>
+          <td class="px-4 py-2.5 text-right" data-val="{{ s.win_rate }}">
+            {% if s.games > 0 %}
+            <span class="font-semibold {% if s.win_rate >= 30 %}text-mtg-win{% elif s.win_rate >= 20 %}text-amber-400{% else %}text-slate-400{% endif %}">
+              {{ s.win_rate }}%
+            </span>
+            {% else %}
+            <span class="text-slate-600">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            <div class="flex gap-2 justify-end">
+              <button onclick="openEdit({{ s.commander.id }}, '{{ s.commander.name | e }}', '{{ s.commander.color_identity }}')"
+                      class="btn-sm">Modifica</button>
+              {% if s.games == 0 %}
+              <form method="POST" action="{{ url_for('main.commander_delete', cmd_id=s.commander.id) }}"
+                    onsubmit="return confirm('Eliminare?')">
+                <button type="submit" class="btn-danger">Elimina</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Add modal ───────────────────────────────────────────────────────────── -->
+<div id="addModal" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+     style="background:rgba(0,0,0,.6)">
+  <div class="card p-6 w-full max-w-md">
+    <h2 class="text-base font-semibold text-white mb-4">Nuovo Commander</h2>
+    <form method="POST" action="{{ url_for('main.commander_add') }}">
+      <div class="space-y-3">
+        <div>
+          <label>Nome Commander</label>
+          <input type="text" name="name" required placeholder="es. Atraxa">
+        </div>
+        <div>
+          <label>Color Identity</label>
+          <input type="text" name="color_identity" required placeholder="es. WUBG" maxlength="5">
+          <p class="text-xs text-slate-500 mt-1">Usa le lettere: W U B R G (es. BR, WBG, WUBR)</p>
+        </div>
+      </div>
+      <div class="flex gap-3 justify-end mt-5">
+        <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')"
+                class="btn-sm">Annulla</button>
+        <button type="submit" class="btn-primary">Aggiungi</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Edit modal ──────────────────────────────────────────────────────────── -->
+<div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+     style="background:rgba(0,0,0,.6)">
+  <div class="card p-6 w-full max-w-md">
+    <h2 class="text-base font-semibold text-white mb-4">Modifica Commander</h2>
+    <form id="editForm" method="POST">
+      <div class="space-y-3">
+        <div>
+          <label>Nome Commander</label>
+          <input type="text" name="name" id="editName" required>
+        </div>
+        <div>
+          <label>Color Identity</label>
+          <input type="text" name="color_identity" id="editColor" required maxlength="5">
+        </div>
+      </div>
+      <div class="flex gap-3 justify-end mt-5">
+        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')"
+                class="btn-sm">Annulla</button>
+        <button type="submit" class="btn-primary">Salva</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── Table sorting ─────────────────────────────────────────────────────────
+let sortCol = -1, sortAsc = false;  // -1 so first call on col 2 won't flip
+
+function sortTable(col, type) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = false; }  // false = descending
+
+  const tbody = document.getElementById('cmdTbody');
+  const rows  = Array.from(tbody.querySelectorAll('tr:not([id^="detail"])'));
+
+  rows.sort((a, b) => {
+    const av = a.children[col]?.dataset.val ?? a.children[col]?.innerText.trim() ?? '';
+    const bv = b.children[col]?.dataset.val ?? b.children[col]?.innerText.trim() ?? '';
+    let cmp;
+    if (type === 'num') cmp = (parseFloat(av) || 0) - (parseFloat(bv) || 0);
+    else                cmp = av.localeCompare(bv);
+    return sortAsc ? cmp : -cmp;
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+
+  // Update sort icons
+  document.querySelectorAll('.sortable').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (parseInt(th.dataset.col) === col)
+      icon.textContent = sortAsc ? ' ▲' : ' ▼';
+    else
+      icon.textContent = '';
+  });
+}
+
+document.querySelectorAll('.sortable').forEach(th => {
+  th.addEventListener('click', () => sortTable(parseInt(th.dataset.col), th.dataset.type));
+  th.style.userSelect = 'none';
+});
+
+// Apply default sort on load
+sortTable(sortCol, 'num');
+
+function openEdit(id, name, color) {
+  document.getElementById('editForm').action = `/commanders/${id}/edit`;
+  document.getElementById('editName').value = name;
+  document.getElementById('editColor').value = color;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+// Close modals on backdrop click
+['addModal','editModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+  });
+});
+</script>
+{% endblock %}

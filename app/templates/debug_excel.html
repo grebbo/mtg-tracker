@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Debug Excel{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-xl font-bold text-white mb-4">🔍 Debug Excel — Struttura Colonne</h1>
+
+  <form method="POST" enctype="multipart/form-data" class="card p-4 mb-6 flex gap-3 items-end">
+    <div class="flex-1">
+      <label>Carica il tuo Excel per analizzare la struttura</label>
+      <input type="file" name="file" accept=".xlsx" required>
+    </div>
+    <button type="submit" class="btn-primary">Analizza</button>
+  </form>
+
+  {% if result %}
+  <div class="card p-4 mb-4">
+    <h2 class="text-sm font-semibold text-slate-300 mb-3">Foglio letto: <span class="text-mtg-accentL">{{ result.sheet }}</span></h2>
+
+    <h3 class="text-xs text-slate-400 mb-2 font-medium">Colonne rilevate (indice → campo):</h3>
+    <div class="flex flex-wrap gap-2 mb-4">
+      {% for field, idx in result.cols.items() %}
+      <span class="badge" style="background:#1e3a5f;color:#93c5fd">
+        [{{ idx }}] {{ field }}
+      </span>
+      {% endfor %}
+    </div>
+
+    <h3 class="text-xs text-slate-400 mb-2 font-medium">Prime 8 righe (raw):</h3>
+    <div class="overflow-x-auto">
+      <table class="text-xs w-full">
+        <thead>
+          <tr class="text-slate-500 border-b border-mtg-border">
+            <th class="pr-3 pb-1 text-left font-medium">Riga</th>
+            {% for i in range(result.header | length) %}
+            <th class="pr-3 pb-1 text-left font-medium">Col {{ i }}<br><span class="text-mtg-accentL text-xs">{{ result.header[i] or '' }}</span></th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-mtg-border">
+          {% for row in result.rows %}
+          <tr>
+            <td class="pr-3 py-1 text-slate-500">{{ row.index }}</td>
+            {% for val in row.values %}
+            <td class="pr-3 py-1 {% if val is not none %}text-slate-200{% else %}text-slate-600{% endif %}">
+              {{ val if val is not none else '—' }}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

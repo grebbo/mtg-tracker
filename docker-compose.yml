@@ -1,0 +1,24 @@
+services:
+  tailscale:
+    image: tailscale/tailscale
+    hostname: mtg-tracker
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    cap_add: [NET_ADMIN, SYS_MODULE]
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: mtg-tracker
+    network_mode: "service:tailscale"
+    depends_on: [tailscale]
+    volumes:
+      - ./data:/app/data
+    env_file: .env
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:

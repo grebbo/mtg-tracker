@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Import Excel{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <h1 class="text-xl font-bold text-white mb-6">📥 Importa da Excel</h1>
+
+  <div class="card p-6">
+    <div class="bg-amber-900/30 border border-amber-700 rounded-lg p-4 mb-5 text-sm text-amber-300">
+      <strong>Attenzione:</strong> l'import aggiungerà i dati al database esistente senza eliminare quelli già presenti.
+      Se è il primo avvio, procedi tranquillamente.
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="mb-4">
+        <label>File Excel (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" required class="mt-1">
+        <p class="text-xs text-slate-500 mt-1">
+          Assicurati che sia il file con il foglio "Tracking Sheet" nel formato originale.
+        </p>
+      </div>
+      <div class="flex gap-3 justify-end">
+        <a href="/" class="btn-sm">Annulla</a>
+        <button type="submit" class="btn-primary">Importa</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

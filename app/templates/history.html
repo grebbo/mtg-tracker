@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Storico Partite{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-xl font-bold text-white">📜 Storico Partite</h1>
+  <a href="/game/new" class="btn-primary">+ Nuova Partita</a>
+</div>
+
+<!-- filters -->
+<div class="card p-4 mb-5 flex flex-wrap gap-3 items-end">
+  <form method="GET" class="flex flex-wrap gap-3 items-end w-full">
+    <div>
+      <label>Filtra per Giocatore</label>
+      <select name="player" onchange="this.form.submit()" style="width:160px">
+        <option value="">Tutti</option>
+        {% for p in players %}
+        <option value="{{ p.name }}" {% if player_filter == p.name %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Filtra per Commander</label>
+      <select name="commander" onchange="this.form.submit()" style="width:180px">
+        <option value="">Tutti</option>
+        {% for c in commanders %}
+        <option value="{{ c.name }}" {% if commander_filter == c.name %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if player_filter or commander_filter %}
+    <a href="/history" class="btn-sm self-end">✕ Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- table -->
+<div class="card overflow-hidden">
+  {% if games.items %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 border-b border-mtg-border" style="background:#12151f">
+          <th class="px-4 py-3 font-medium">Data</th>
+          <th class="px-4 py-3 font-medium">Vincitore</th>
+          <th class="px-4 py-3 font-medium">Commander</th>
+          <th class="px-4 py-3 font-medium">Win Con</th>
+          <th class="px-4 py-3 font-medium">Turni</th>
+          <th class="px-4 py-3 font-medium">Giocatori</th>
+          <th class="px-4 py-3 font-medium text-right">Azioni</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-mtg-border">
+        {% for game in games.items %}
+          {% set winner = game.entries | selectattr('finish', 'eq', 1) | first %}
+          <tr class="hover:bg-white/[.02] cursor-pointer transition-colors"
+              onclick="toggleDetail('detail{{ game.id }}')">
+            <td class="px-4 py-3 text-slate-300 font-medium">{{ game.date.strftime('%d/%m/%Y') }}</td>
+            <td class="px-4 py-3 font-semibold text-mtg-win">{{ winner.player.name if winner else '—' }}</td>
+            <td class="px-4 py-3 text-slate-300">{{ winner.commander.name if winner else '—' }}</td>
+            <td class="px-4 py-3">
+              {% if winner and winner.victory_condition %}
+              <span class="badge" style="background:#1e3a5f;color:#93c5fd">{{ winner.victory_condition }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-slate-400">{{ game.total_turns or '—' }}</td>
+            <td class="px-4 py-3 text-slate-400 text-xs">
+              {% for e in game.entries | sort(attribute='finish') %}
+                {{ e.player.name }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex gap-2 justify-end" onclick="event.stopPropagation()">
+                <a href="{{ url_for('main.game_edit', game_id=game.id) }}" class="btn-sm">Modifica</a>
+                <form method="POST" action="{{ url_for('main.game_delete', game_id=game.id) }}"
+                      onsubmit="return confirm('Eliminare questa partita?')">
+                  <button type="submit" class="btn-danger">Elimina</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <!-- expandable detail row -->
+          <tr id="detail{{ game.id }}" class="hidden">
+            <td colspan="7" class="px-4 pb-4" style="background:#12151f">
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs mt-2">
+                  <thead>
+                    <tr class="text-slate-500">
+                      <th class="text-left pb-1 pr-4 font-medium">Giocatore</th>
+                      <th class="text-left pb-1 pr-4 font-medium">Commander</th>
+                      <th class="text-left pb-1 pr-4 font-medium">Pos.</th>
+                      <th class="text-left pb-1 pr-4 font-medium">Turno</th>
+                      <th class="text-left pb-1 pr-4 font-medium">T.Elim</th>
+                      <th class="text-left pb-1 pr-4 font-medium">Eliminato Da</th>
+                      <th class="text-left pb-1 pr-4 font-medium">Condizione</th>
+                      <th class="text-left pb-1 font-medium">Sol Ring</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for e in game.entries | sort(attribute='finish') %}
+                    <tr class="{% if e.finish == 1 %}text-mtg-win{% else %}text-slate-400{% endif %}">
+                      <td class="pr-4 py-0.5 font-medium">{{ e.player.name }}</td>
+                      <td class="pr-4">{{ e.commander.name }}</td>
+                      <td class="pr-4">
+                        {% if e.finish == 1 %}🏆{% else %}{{ e.finish or '—' }}°{% endif %}
+                      </td>
+                      <td class="pr-4">{{ e.turn_order or '—' }}</td>
+                      <td class="pr-4">{{ e.turn_eliminated or '—' }}</td>
+                      <td class="pr-4">{{ e.eliminated_by_commander.name if e.eliminated_by_commander else '—' }}</td>
+                      <td class="pr-4">{{ e.victory_condition or e.loss_condition or '—' }}</td>
+                      <td>{% if e.sol_ring_t1 %}<span class="text-amber-400">✓</span>{% else %}—{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- pagination -->
+  {% if games.pages > 1 %}
+  <div class="flex justify-center items-center gap-2 p-4 border-t border-mtg-border">
+    {% if games.has_prev %}
+    <a href="{{ url_for('main.history', page=games.prev_num, player=player_filter, commander=commander_filter) }}"
+       class="btn-sm">← Prec</a>
+    {% endif %}
+    <span class="text-slate-400 text-sm">Pagina {{ games.page }} / {{ games.pages }}</span>
+    {% if games.has_next %}
+    <a href="{{ url_for('main.history', page=games.next_num, player=player_filter, commander=commander_filter) }}"
+       class="btn-sm">Succ →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-12 text-slate-500">
+    <p class="text-lg mb-2">Nessuna partita trovata.</p>
+    <a href="/game/new" class="text-mtg-accentL hover:underline text-sm">Aggiungi la prima partita</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleDetail(id) {
+  const row = document.getElementById(id);
+  row.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

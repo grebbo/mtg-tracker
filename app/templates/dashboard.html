@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- ── KPI bar ──────────────────────────────────────────────────────────── -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  {% set top_player = player_stats | sort(attribute='wins', reverse=True) | first %}
+  {% set top_cmd    = commander_stats | sort(attribute='win_rate', reverse=True) | first %}
+
+  <!-- Partite Totali -->
+  <div class="card p-4 flex items-center gap-3">
+    <span class="text-2xl">🎮</span>
+    <div>
+      <div class="text-xs text-slate-400 font-medium">Partite Totali</div>
+      <div class="text-xl font-bold" style="color:#7c3aed">{{ total_games }}</div>
+    </div>
+  </div>
+
+  <!-- Giocatori -->
+  <div class="card p-4 flex items-center gap-3">
+    <span class="text-2xl">👥</span>
+    <div>
+      <div class="text-xs text-slate-400 font-medium">Giocatori</div>
+      <div class="text-xl font-bold" style="color:#3b82f6">{{ player_stats | length }}</div>
+    </div>
+  </div>
+
+  <!-- Top Giocatore -->
+  <div class="card p-4 flex items-center gap-3">
+    <span class="text-2xl">🏆</span>
+    <div>
+      <div class="text-xs text-slate-400 font-medium">Top Giocatore</div>
+      <div class="text-xl font-bold" style="color:#f59e0b">{{ top_player.name if top_player else '—' }}</div>
+      {% if top_player %}<div class="text-xs text-slate-500 mt-0.5">{{ top_player.wins }} vittorie</div>{% endif %}
+      {% if runner_up_player %}
+      <div class="text-xs mt-1.5">
+        <span class="text-slate-600 uppercase tracking-wide" style="font-size:0.6rem">runner-up</span>
+        <span class="text-slate-500 ml-1">{{ runner_up_player.name }} · {{ runner_up_player.wins }} vitt.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Top Commander -->
+  <div class="card p-4 flex items-center gap-3">
+    <span class="text-2xl">⚔️</span>
+    <div>
+      <div class="text-xs text-slate-400 font-medium">Top Commander</div>
+      <div class="text-xl font-bold" style="color:#22c55e">{{ top_cmd.name if top_cmd else '—' }}</div>
+      {% if top_cmd %}<div class="text-xs text-slate-500 mt-0.5">{{ top_cmd.win_rate }}% win rate · {{ top_cmd.wins }} vitt.</div>{% endif %}
+      {% if runner_up_cmd %}
+      <div class="text-xs mt-1.5">
+        <span class="text-slate-600 uppercase tracking-wide" style="font-size:0.6rem">runner-up</span>
+        <span class="text-slate-500 ml-1">{{ runner_up_cmd.name }} · {{ runner_up_cmd.wins }} vitt.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── game length stats ───────────────────────────────────────────────── -->
+<div class="grid grid-cols-4 gap-4 mb-6">
+  <div class="card p-3 text-center">
+    <div class="text-xs text-slate-400">Avg Turns</div>
+    <div class="text-2xl font-bold text-slate-200">{{ length_stats.avg }}</div>
+  </div>
+  <div class="card p-3 text-center">
+    <div class="text-xs text-slate-400">Max Turns</div>
+    <div class="text-2xl font-bold text-slate-200">{{ length_stats.max }}</div>
+    {% if length_stats.max_winner %}
+    <div class="text-xs text-slate-500 mt-1 leading-snug">
+      {{ length_stats.max_winner.player }}<br>
+      <span class="text-slate-600">{{ length_stats.max_winner.commander }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card p-3 text-center">
+    <div class="text-xs text-slate-400">Min Turns</div>
+    <div class="text-2xl font-bold text-slate-200">{{ length_stats.min }}</div>
+    {% if length_stats.min_winner %}
+    <div class="text-xs text-slate-500 mt-1 leading-snug">
+      {{ length_stats.min_winner.player }}<br>
+      <span class="text-slate-600">{{ length_stats.min_winner.commander }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card p-3 text-center">
+    <div class="text-xs text-slate-400">Median</div>
+    <div class="text-2xl font-bold text-slate-200">{{ length_stats.median }}</div>
+  </div>
+</div>
+
+<!-- ── charts row 1 ───────────────────────────────────────────────────── -->
+<div class="grid grid-cols-1 gap-6 mb-6">
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-slate-300">Statistiche Giocatori</h2>
+      <div class="flex gap-1">
+        <button id="btnPlayerWins" onclick="setPlayerTab('wins')"
+          class="tab-btn tab-active text-xs px-3 py-1 rounded-md transition-colors">Vittorie</button>
+        <button id="btnPlayerRate" onclick="setPlayerTab('rate')"
+          class="tab-btn text-xs px-3 py-1 rounded-md transition-colors">Win Rate %</button>
+      </div>
+    </div>
+    <canvas id="chartPlayer" height="80"></canvas>
+  </div>
+</div>
+
+<!-- ── Sol Ring row ────────────────────────────────────────────────────── -->
+<div class="grid grid-cols-1 gap-6 mb-6">
+  <div class="card p-5">
+    <h2 class="text-sm font-semibold text-slate-300 mb-4">🪙 Sol Ring al Turno 1 per Giocatore</h2>
+    <canvas id="chartSolRing" height="100"></canvas>
+  </div>
+</div>
+
+<!-- ── charts row 2 ───────────────────────────────────────────────────── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+  <!-- Commander chart with tabs -->
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-slate-300">Top Commander</h2>
+      <div class="flex gap-1">
+        <button id="btnCmdWins" onclick="setCmdTab('wins')"
+          class="tab-btn tab-active text-xs px-3 py-1 rounded-md transition-colors">Vittorie</button>
+        <button id="btnCmdKills" onclick="setCmdTab('kills')"
+          class="tab-btn text-xs px-3 py-1 rounded-md transition-colors">Kill</button>
+      </div>
+    </div>
+    <canvas id="chartCommanders" height="260"></canvas>
+  </div>
+
+  <!-- Color identity chart with tabs -->
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-slate-300">Win Rate per Color Identity (%)</h2>
+      <div class="flex gap-1">
+        <button id="btnColorAgg" onclick="setColorTab('agg')"
+          class="tab-btn tab-active text-xs px-3 py-1 rounded-md transition-colors">Singoli</button>
+        <button id="btnColorCombo" onclick="setColorTab('combo')"
+          class="tab-btn text-xs px-3 py-1 rounded-md transition-colors">Combinazioni</button>
+      </div>
+    </div>
+    <canvas id="chartColors" height="260"></canvas>
+  </div>
+
+</div>
+
+<!-- ── recent games ────────────────────────────────────────────────────── -->
+<div class="card p-5">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold text-slate-300">Ultime Partite</h2>
+    <a href="/history" class="text-xs text-mtg-accentL hover:underline">Vedi tutto →</a>
+  </div>
+  {% if recent_games %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 border-b border-mtg-border">
+          <th class="pb-2 font-medium">Data</th>
+          <th class="pb-2 font-medium">Vincitore</th>
+          <th class="pb-2 font-medium">Commander</th>
+          <th class="pb-2 font-medium">Turni</th>
+          <th class="pb-2 font-medium">Giocatori</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-mtg-border">
+        {% for game in recent_games %}
+          {% set winner = game.entries | selectattr('finish', 'eq', 1) | first %}
+          <tr class="hover:bg-mtg-border/20 transition-colors">
+            <td class="py-2.5 text-slate-300">{{ game.date.strftime('%d/%m/%Y') }}</td>
+            <td class="py-2.5 font-medium text-mtg-win">{{ winner.player.name if winner else '—' }}</td>
+            <td class="py-2.5 text-slate-300">{{ winner.commander.name if winner else '—' }}</td>
+            <td class="py-2.5 text-slate-400">{{ game.total_turns or '—' }}</td>
+            <td class="py-2.5 text-slate-400">
+              {% for e in game.entries %}
+                <span class="text-xs">{{ e.player.name }}{% if not loop.last %}, {% endif %}</span>
+              {% endfor %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-slate-500 text-sm text-center py-6">Nessuna partita ancora. <a href="/game/new" class="text-mtg-accentL hover:underline">Aggiungi la prima!</a></p>
+  {% endif %}
+</div>
+<style>
+  .tab-btn        { background: #1e293b; color: #94a3b8; }
+  .tab-btn:hover  { background: #2d3147; color: #e2e8f0; }
+  .tab-active     { background: #7c3aed !important; color: #fff !important; }
+</style>
+<script>
+const PLAYER_STATS    = {{ player_stats_json | safe }};
+const COMMANDER_STATS = {{ commander_stats_json | safe }};
+const COLOR_STATS     = {{ color_stats_json | safe }};
+const AGG_COLOR_STATS = {{ agg_color_stats_json | safe }};
+
+const TICK = { color: '#94a3b8', font: { size: 11 } };
+const GRID = { color: '#2d3147' };
+const CHART_DEFAULTS = {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: { x: { ticks: TICK, grid: GRID }, y: { ticks: TICK, grid: GRID } },
+};
+function pctY() {
+  return { ...CHART_DEFAULTS.scales.y, max: 100,
+           ticks: { ...TICK, callback: v => v + '%' } };
+}
+
+/* ── MTG color palette (visible on dark background) ──────────── */
+const MTG_C = {
+  'W': '#f0edd0',  // cream — Plains
+  'U': '#4488ee',  // blue  — Islands
+  'B': '#7878aa',  // muted purple-gray — Swamps (black needs visibility)
+  'R': '#ee4444',  // red   — Mountains
+  'G': '#33bb55',  // green — Forests
+  '⟡': '#b090d0', // purple — Colorless
+};
+const COLOR_ORDER = ['W','U','B','R','G','⟡'];
+
+function identityColors(identity) {
+  const chars = (identity || '').split('').filter(c => MTG_C[c]);
+  chars.sort((a, b) => COLOR_ORDER.indexOf(a) - COLOR_ORDER.indexOf(b));
+  return chars.length ? chars.map(c => MTG_C[c]) : ['#94a3b8'];
+}
+
+/* ── Scriptable backgroundColor factory — called per-bar at draw time */
+function mtgBgFn(getIdentity) {
+  return function(ctx) {
+    const { chart, dataIndex } = ctx;
+    const { ctx: c2d, chartArea } = chart;
+    if (!chartArea) return '#94a3b8';
+    const lbl  = chart.data.labels[dataIndex];
+    const id   = getIdentity ? getIdentity(lbl) : lbl;
+    const cols = identityColors(id);
+    if (cols.length === 1) return cols[0];
+    const isH = chart.config.options.indexAxis === 'y';
+    const g   = isH
+      ? c2d.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+      : c2d.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    cols.forEach((c, i) => g.addColorStop(i / Math.max(cols.length - 1, 1), c));
+    return g;
+  };
+}
+
+/* ── Chart 1: Player stats — tabs Vittorie / Win Rate ─────────── */
+const playerChart = new Chart(document.getElementById('chartPlayer'), {
+  type: 'bar',
+  data: {
+    labels: PLAYER_STATS.map(p => p.name),
+    datasets: [{ label: 'Vittorie', data: PLAYER_STATS.map(p => p.wins),
+                 backgroundColor: '#7c3aed', borderRadius: 6 }]
+  },
+  options: {
+    ...CHART_DEFAULTS, responsive: true,
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: {
+      afterLabel: ctx => {
+        const p = PLAYER_STATS[ctx.dataIndex];
+        return [`Partite giocate: ${p.games}`, `Win rate: ${p.win_rate}%`];
+      }
+    }}}
+  }
+});
+
+function setPlayerTab(tab) {
+  const isWins = tab === 'wins';
+  playerChart.data.datasets[0].label           = isWins ? 'Vittorie' : 'Win Rate %';
+  playerChart.data.datasets[0].data            = isWins ? PLAYER_STATS.map(p => p.wins)
+                                                        : PLAYER_STATS.map(p => p.win_rate);
+  playerChart.data.datasets[0].backgroundColor = isWins ? '#7c3aed'
+    : PLAYER_STATS.map(p => p.win_rate >= 30 ? '#22c55e' : p.win_rate >= 20 ? '#f59e0b' : '#ef4444');
+  playerChart.options.scales.y = isWins ? CHART_DEFAULTS.scales.y : pctY();
+  playerChart.options.plugins.tooltip.callbacks.afterLabel = ctx => {
+    const p = PLAYER_STATS[ctx.dataIndex];
+    return isWins ? [`Partite giocate: ${p.games}`, `Win rate: ${p.win_rate}%`]
+                  : [`Partite giocate: ${p.games}`, `Vittorie: ${p.wins}`];
+  };
+  playerChart.update();
+  document.getElementById('btnPlayerWins').classList.toggle('tab-active',  isWins);
+  document.getElementById('btnPlayerRate').classList.toggle('tab-active', !isWins);
+}
+
+/* ── Chart Sol Ring ───────────────────────────────────────────── */
+new Chart(document.getElementById('chartSolRing'), {
+  type: 'bar',
+  data: {
+    labels: PLAYER_STATS.map(p => p.name),
+    datasets: [{ label: 'Sol Ring T1', data: PLAYER_STATS.map(p => p.sol_rings),
+                 backgroundColor: '#f59e0b', borderRadius: 6 }]
+  },
+  options: { ...CHART_DEFAULTS, responsive: true }
+});
+
+/* ── Chart 3: Top Commander — tabs Vittorie / Kill ────────────── */
+const topCmds = COMMANDER_STATS.filter(c => c.wins > 0).slice(0, 12);
+
+const cmdChart = new Chart(document.getElementById('chartCommanders'), {
+  type: 'bar',
+  data: {
+    labels: topCmds.map(c => c.name),
+    datasets: [{ label: 'Vittorie', data: topCmds.map(c => c.wins),
+                 backgroundColor: '#f59e0b', borderRadius: 4 }]
+  },
+  options: {
+    ...CHART_DEFAULTS, responsive: true, indexAxis: 'y',
+    scales: { x: CHART_DEFAULTS.scales.x,
+              y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: GRID } },
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: {
+      afterLabel: ctx => `Partite giocate: ${topCmds[ctx.dataIndex].games}`
+    }}}
+  }
+});
+
+function setCmdTab(tab) {
+  const isWins = tab === 'wins';
+  cmdChart.data.datasets[0].label           = isWins ? 'Vittorie' : 'Kill';
+  cmdChart.data.datasets[0].data            = isWins ? topCmds.map(c => c.wins)
+                                                     : topCmds.map(c => c.kills);
+  cmdChart.data.datasets[0].backgroundColor = isWins ? '#f59e0b' : '#ef4444';
+  cmdChart.update();
+  document.getElementById('btnCmdWins').classList.toggle('tab-active',  isWins);
+  document.getElementById('btnCmdKills').classList.toggle('tab-active', !isWins);
+}
+
+/* ── Chart 4: Color identity — tabs Singoli (default) / Combinazioni */
+// Labels ARE the color identities → empty map {} means: use label directly as identity
+let colorCurrentData = AGG_COLOR_STATS;
+const colorChart = new Chart(document.getElementById('chartColors'), {
+  type: 'bar',
+  data: {
+    labels: AGG_COLOR_STATS.map(c => c.color),
+    datasets: [{ label: 'Win Rate %', data: AGG_COLOR_STATS.map(c => c.win_rate),
+                 backgroundColor: mtgBgFn(null), borderRadius: 4 }]
+  },
+  options: {
+    ...CHART_DEFAULTS, responsive: true,
+    scales: { ...CHART_DEFAULTS.scales, y: pctY() },
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: {
+      afterLabel: ctx => {
+        const d = colorCurrentData[ctx.dataIndex];
+        return [`Partite: ${d.games}`, `Vittorie: ${d.wins}`];
+      }
+    }}}
+  }
+});
+
+function setColorTab(tab) {
+  const isAgg       = tab === 'agg';
+  const src         = isAgg ? AGG_COLOR_STATS : COLOR_STATS;
+  colorCurrentData                 = src;
+  colorChart.data.labels           = src.map(c => c.color);
+  colorChart.data.datasets[0].data = src.map(c => c.win_rate);
+  colorChart.update();
+  document.getElementById('btnColorAgg').classList.toggle('tab-active',   isAgg);
+  document.getElementById('btnColorCombo').classList.toggle('tab-active', !isAgg);
+}
+</script>
+{% endblock %}

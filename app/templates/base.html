@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}MTG Tracker{% endblock %} — Maggici</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            mtg: {
+              bg:     '#0f1117',
+              card:   '#1a1d27',
+              border: '#2d3147',
+              accent: '#7c3aed',
+              accentL:'#9f67ff',
+              gold:   '#f59e0b',
+              win:    '#22c55e',
+              loss:   '#ef4444',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background-color: #0f1117; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+    .card  { background: #1a1d27; border: 1px solid #2d3147; border-radius: 0.75rem; }
+    .btn-primary { background: #7c3aed; color: #fff; padding: .45rem 1.1rem; border-radius: .5rem;
+                   font-weight: 600; font-size: .875rem; transition: background .15s; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-sm { background: #2d3147; color: #cbd5e1; padding: .3rem .75rem; border-radius: .4rem;
+              font-size: .8rem; font-weight: 500; transition: background .15s; }
+    .btn-sm:hover { background: #3d4163; }
+    .btn-danger { background: #7f1d1d; color: #fca5a5; padding: .3rem .75rem; border-radius: .4rem;
+                  font-size: .8rem; font-weight: 500; }
+    .btn-danger:hover { background: #991b1b; }
+    input, select, textarea {
+      background: #0f1117; border: 1px solid #2d3147; color: #e2e8f0;
+      border-radius: .5rem; padding: .45rem .75rem; font-size: .875rem; width: 100%;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,.25);
+    }
+    label { font-size: .8rem; font-weight: 500; color: #94a3b8; margin-bottom: .25rem; display: block; }
+    .badge {
+      display: inline-block; padding: .15rem .5rem; border-radius: 9999px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+    }
+    .flash-success { background: #14532d; color: #86efac; border: 1px solid #166534; }
+    .flash-error   { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+    .flash-warning { background: #78350f; color: #fde68a; border: 1px solid #92400e; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f1117; }
+    ::-webkit-scrollbar-thumb { background: #2d3147; border-radius: 3px; }
+    .nav-link { color: #94a3b8; font-size: .9rem; font-weight: 500; padding: .4rem .75rem;
+                border-radius: .5rem; transition: all .15s; }
+    .nav-link:hover, .nav-link.active { color: #e2e8f0; background: #2d3147; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-full flex flex-col">
+
+  <!-- navbar -->
+  <nav class="sticky top-0 z-50 border-b border-mtg-border" style="background:#1a1d27">
+    <div class="max-w-7xl mx-auto px-4 flex items-center h-14 gap-6">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg text-white">
+        <span class="text-2xl">⚔️</span>
+        <span class="text-mtg-accentL">Maggici</span>
+      </a>
+      <div class="flex items-center gap-1 ml-4">
+        <a href="/"            class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">Dashboard</a>
+        <a href="/game/new"    class="nav-link {% if request.endpoint == 'main.game_new' %}active{% endif %}">+ Partita</a>
+        <a href="/history"     class="nav-link {% if request.endpoint == 'main.history' %}active{% endif %}">Storico</a>
+        <a href="/commanders"  class="nav-link {% if request.endpoint == 'main.commanders' %}active{% endif %}">Commander</a>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/import" class="btn-sm">Import Excel</a>
+        <a href="/export" class="btn-sm">Export Excel</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="max-w-7xl mx-auto px-4 pt-3 space-y-2 w-full">
+        {% for category, msg in messages %}
+          <div class="flash-{{ category }} px-4 py-2.5 rounded-lg text-sm">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- page content -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="text-center text-xs text-slate-600 py-4">
+    Maggici MTG Tracker · dati salvati in SQLite + Excel sync
+  </footer>
+
+</body>
+</html>
