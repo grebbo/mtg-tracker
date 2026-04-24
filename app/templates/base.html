@@ -85,6 +85,26 @@
     </div>
   </nav>
 
+  <!-- test mode banner -->
+  {% if config.TEST_MODE %}
+  <div style="background:#78350f;border-bottom:2px solid #f59e0b" class="w-full">
+    <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-2 text-amber-300 font-semibold text-sm">
+        <span>⚠</span>
+        <span>MODALITÀ TEST — database isolato, dati non reali</span>
+      </div>
+      <form method="POST" action="/test/reset"
+            onsubmit="return confirm('Resettare il database di test? Tutti i dati verranno eliminati.')">
+        <button type="submit"
+                style="background:#92400e;border:1px solid #f59e0b;color:#fde68a"
+                class="px-3 py-1 rounded text-xs font-semibold hover:opacity-80 transition-opacity">
+          Reset DB
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- flash messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}

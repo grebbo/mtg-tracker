@@ -148,6 +148,31 @@ def _sync_excel():
         flash(f'Game saved but Excel sync failed: {e}', 'warning')
 
 
+def _compute_finish_ranks(winner_idx, slot_data):
+    """Assign finish ranks from turn_eliminated. Ties get the worst (highest) rank in the group."""
+    n = len(slot_data)
+    if winner_idx is None or winner_idx >= n:
+        return list(range(1, n + 1))
+    finishes = [None] * n
+    finishes[winner_idx] = 1
+    losers = [(j, slot_data[j]['turn_eliminated']) for j in range(n) if j != winner_idx]
+    # higher turn = survived longer = better rank; None = worst
+    losers.sort(key=lambda x: (x[1] is None, -(x[1] or 0)))
+    pos = 2
+    i = 0
+    while i < len(losers):
+        curr = losers[i][1]
+        j = i + 1
+        while j < len(losers) and losers[j][1] == curr:
+            j += 1
+        last_pos = pos + (j - i - 1)
+        for k in range(i, j):
+            finishes[losers[k][0]] = last_pos
+        pos += (j - i)
+        i = j
+    return finishes
+
+
 # ── dashboard ─────────────────────────────────────────────────────────────────
 
 @main.route('/')
@@ -221,38 +246,49 @@ def game_new():
     if request.method == 'POST':
         try:
             game_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
-            total_turns = request.form.get('total_turns', type=int)
             num_players = request.form.get('num_players', type=int, default=4)
+            winner_slot = request.form.get('winner_slot', type=int)
+
+            slot_data = []
+            for i in range(num_players):
+                player_id = request.form.get(f'p{i}_player', type=int)
+                if not player_id:
+                    continue
+                is_winner = (i == winner_slot)
+                slot_data.append({
+                    'player_id': player_id,
+                    'commander_id': request.form.get(f'p{i}_commander', type=int),
+                    'sol_ring': bool(request.form.get(f'p{i}_sol_ring')),
+                    'turn_eliminated': None if is_winner else request.form.get(f'p{i}_turn_eliminated', type=int),
+                    'eliminated_by_id': None if is_winner else request.form.get(f'p{i}_eliminated_by', type=int),
+                    'vcond': (request.form.get(f'p{i}_victory_condition', '').strip() or None) if is_winner else None,
+                    'lcond': None if is_winner else (request.form.get(f'p{i}_loss_condition', '').strip() or None),
+                    'notes': request.form.get(f'p{i}_notes', '').strip() or None,
+                    'is_winner': is_winner,
+                })
+
+            winner_idx = next((j for j, s in enumerate(slot_data) if s['is_winner']), None)
+            finishes = _compute_finish_ranks(winner_idx, slot_data)
+            loser_turns = [s['turn_eliminated'] for s in slot_data if not s['is_winner'] and s['turn_eliminated']]
+            total_turns = max(loser_turns) if loser_turns else None
 
             game = Game(date=game_date, total_turns=total_turns)
             db.session.add(game)
             db.session.flush()
 
-            for i in range(num_players):
-                player_id = request.form.get(f'p{i}_player', type=int)
-                commander_id = request.form.get(f'p{i}_commander', type=int)
-                finish = request.form.get(f'p{i}_finish', type=int)
-                turn_order = request.form.get(f'p{i}_turn_order', type=int)
-                sol_ring = bool(request.form.get(f'p{i}_sol_ring'))
-                turn_elim = request.form.get(f'p{i}_turn_eliminated', type=int)
-                elim_by = request.form.get(f'p{i}_eliminated_by', type=int)
-                vcond = request.form.get(f'p{i}_victory_condition', '').strip() or None
-                lcond = request.form.get(f'p{i}_loss_condition', '').strip() or None
-                notes = request.form.get(f'p{i}_notes', '').strip() or None
-
-                is_winner = (finish == 1)
+            for j, s in enumerate(slot_data):
                 entry = GameEntry(
                     game_id=game.id,
-                    player_id=player_id,
-                    commander_id=commander_id,
-                    finish=finish,
-                    turn_order=turn_order,
-                    sol_ring_t1=sol_ring,
-                    turn_eliminated=None if is_winner else turn_elim,
-                    eliminated_by_id=None if is_winner else elim_by,
-                    victory_condition=vcond if is_winner else None,
-                    loss_condition=lcond if not is_winner else None,
-                    notes=notes,
+                    player_id=s['player_id'],
+                    commander_id=s['commander_id'],
+                    finish=finishes[j],
+                    turn_order=j + 1,
+                    sol_ring_t1=s['sol_ring'],
+                    turn_eliminated=s['turn_eliminated'],
+                    eliminated_by_id=s['eliminated_by_id'],
+                    victory_condition=s['vcond'],
+                    loss_condition=s['lcond'],
+                    notes=s['notes'],
                 )
                 db.session.add(entry)
 
@@ -265,14 +301,19 @@ def game_new():
             db.session.rollback()
             flash(f'Errore: {e}', 'error')
 
+    players_json = [{'id': p.id, 'name': p.name} for p in players]
+    commanders_json = [{'id': c.id, 'name': c.name, 'color_identity': c.color_identity} for c in commanders]
     return render_template(
         'game_form.html',
         players=players,
         commanders=commanders,
+        players_json=players_json,
+        commanders_json=commanders_json,
         win_conditions=WIN_CONDITIONS,
         loss_conditions=LOSS_CONDITIONS,
         today=date.today().isoformat(),
         game=None,
+        existing_entries_json=[],
     )
 
 
@@ -285,37 +326,49 @@ def game_edit(game_id):
     if request.method == 'POST':
         try:
             game.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
-            game.total_turns = request.form.get('total_turns', type=int)
             num_players = request.form.get('num_players', type=int, default=4)
+            winner_slot = request.form.get('winner_slot', type=int)
+
+            slot_data = []
+            for i in range(num_players):
+                player_id = request.form.get(f'p{i}_player', type=int)
+                if not player_id:
+                    continue
+                is_winner = (i == winner_slot)
+                slot_data.append({
+                    'player_id': player_id,
+                    'commander_id': request.form.get(f'p{i}_commander', type=int),
+                    'sol_ring': bool(request.form.get(f'p{i}_sol_ring')),
+                    'turn_eliminated': None if is_winner else request.form.get(f'p{i}_turn_eliminated', type=int),
+                    'eliminated_by_id': None if is_winner else request.form.get(f'p{i}_eliminated_by', type=int),
+                    'vcond': (request.form.get(f'p{i}_victory_condition', '').strip() or None) if is_winner else None,
+                    'lcond': None if is_winner else (request.form.get(f'p{i}_loss_condition', '').strip() or None),
+                    'notes': request.form.get(f'p{i}_notes', '').strip() or None,
+                    'is_winner': is_winner,
+                })
+
+            winner_idx = next((j for j, s in enumerate(slot_data) if s['is_winner']), None)
+            finishes = _compute_finish_ranks(winner_idx, slot_data)
+            loser_turns = [s['turn_eliminated'] for s in slot_data if not s['is_winner'] and s['turn_eliminated']]
+            game.total_turns = max(loser_turns) if loser_turns else None
 
             for entry in game.entries:
                 db.session.delete(entry)
             db.session.flush()
 
-            for i in range(num_players):
-                player_id = request.form.get(f'p{i}_player', type=int)
-                commander_id = request.form.get(f'p{i}_commander', type=int)
-                finish = request.form.get(f'p{i}_finish', type=int)
-                turn_order = request.form.get(f'p{i}_turn_order', type=int)
-                sol_ring = bool(request.form.get(f'p{i}_sol_ring'))
-                turn_elim = request.form.get(f'p{i}_turn_eliminated', type=int)
-                elim_by = request.form.get(f'p{i}_eliminated_by', type=int)
-                vcond = request.form.get(f'p{i}_victory_condition', '').strip() or None
-                lcond = request.form.get(f'p{i}_loss_condition', '').strip() or None
-                notes = request.form.get(f'p{i}_notes', '').strip() or None
-                is_winner = (finish == 1)
+            for j, s in enumerate(slot_data):
                 entry = GameEntry(
                     game_id=game.id,
-                    player_id=player_id,
-                    commander_id=commander_id,
-                    finish=finish,
-                    turn_order=turn_order,
-                    sol_ring_t1=sol_ring,
-                    turn_eliminated=None if is_winner else turn_elim,
-                    eliminated_by_id=None if is_winner else elim_by,
-                    victory_condition=vcond if is_winner else None,
-                    loss_condition=lcond if not is_winner else None,
-                    notes=notes,
+                    player_id=s['player_id'],
+                    commander_id=s['commander_id'],
+                    finish=finishes[j],
+                    turn_order=j + 1,
+                    sol_ring_t1=s['sol_ring'],
+                    turn_eliminated=s['turn_eliminated'],
+                    eliminated_by_id=s['eliminated_by_id'],
+                    victory_condition=s['vcond'],
+                    loss_condition=s['lcond'],
+                    notes=s['notes'],
                 )
                 db.session.add(entry)
 
@@ -328,14 +381,34 @@ def game_edit(game_id):
             db.session.rollback()
             flash(f'Errore: {e}', 'error')
 
+    players_json = [{'id': p.id, 'name': p.name} for p in players]
+    commanders_json = [{'id': c.id, 'name': c.name, 'color_identity': c.color_identity} for c in commanders]
+    sorted_entries = sorted(game.entries, key=lambda e: (e.turn_order or 999, e.id))
+    existing_entries_json = [
+        {
+            'player_id': e.player_id,
+            'commander_id': e.commander_id,
+            'is_winner': e.finish == 1,
+            'sol_ring': e.sol_ring_t1,
+            'turn_eliminated': e.turn_eliminated,
+            'eliminated_by_id': e.eliminated_by_id,
+            'victory_condition': e.victory_condition,
+            'loss_condition': e.loss_condition,
+            'notes': e.notes or '',
+        }
+        for e in sorted_entries
+    ]
     return render_template(
         'game_form.html',
         players=players,
         commanders=commanders,
+        players_json=players_json,
+        commanders_json=commanders_json,
         win_conditions=WIN_CONDITIONS,
         loss_conditions=LOSS_CONDITIONS,
         today=date.today().isoformat(),
         game=game,
+        existing_entries_json=existing_entries_json,
     )
 
 
@@ -478,3 +551,18 @@ def export_excel():
     from app.excel_sync import sync_to_excel
     path = sync_to_excel(current_app.config['DATA_DIR'])
     return send_file(path, as_attachment=True, download_name='mtg_tracking.xlsx')
+
+
+# ── test mode ─────────────────────────────────────────────────────────────────
+
+@main.route('/test/reset', methods=['POST'])
+def test_reset():
+    if not current_app.config.get('TEST_MODE'):
+        from flask import abort
+        abort(403)
+    db.drop_all()
+    db.create_all()
+    from app.models import seed_initial_data
+    seed_initial_data()
+    flash('Database di test resettato.', 'success')
+    return redirect(url_for('main.dashboard'))

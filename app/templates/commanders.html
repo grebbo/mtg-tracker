@@ -75,21 +75,27 @@
      style="background:rgba(0,0,0,.6)">
   <div class="card p-6 w-full max-w-md">
     <h2 class="text-base font-semibold text-white mb-4">Nuovo Commander</h2>
-    <form method="POST" action="{{ url_for('main.commander_add') }}">
+    <form id="addForm" method="POST" action="{{ url_for('main.commander_add') }}">
       <div class="space-y-3">
         <div>
           <label>Nome Commander</label>
           <input type="text" name="name" required placeholder="es. Atraxa">
         </div>
         <div>
-          <label>Color Identity</label>
-          <input type="text" name="color_identity" required placeholder="es. WUBG" maxlength="5">
-          <p class="text-xs text-slate-500 mt-1">Usa le lettere: W U B R G (es. BR, WBG, WUBR)</p>
+          <label class="block mb-2">Color Identity</label>
+          <div id="addColorBtns" class="flex gap-2">
+            <button type="button" data-color="W" class="color-btn">W</button>
+            <button type="button" data-color="U" class="color-btn">U</button>
+            <button type="button" data-color="B" class="color-btn">B</button>
+            <button type="button" data-color="R" class="color-btn">R</button>
+            <button type="button" data-color="G" class="color-btn">G</button>
+          </div>
+          <input type="hidden" name="color_identity" id="addColorInput">
+          <p id="addColorHint" class="text-xs text-red-400 mt-1 hidden">Seleziona almeno un colore.</p>
         </div>
       </div>
       <div class="flex gap-3 justify-end mt-5">
-        <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')"
-                class="btn-sm">Annulla</button>
+        <button type="button" onclick="closeAdd()" class="btn-sm">Annulla</button>
         <button type="submit" class="btn-primary">Aggiungi</button>
       </div>
     </form>
@@ -108,8 +114,16 @@
           <input type="text" name="name" id="editName" required>
         </div>
         <div>
-          <label>Color Identity</label>
-          <input type="text" name="color_identity" id="editColor" required maxlength="5">
+          <label class="block mb-2">Color Identity</label>
+          <div id="editColorBtns" class="flex gap-2">
+            <button type="button" data-color="W" class="color-btn">W</button>
+            <button type="button" data-color="U" class="color-btn">U</button>
+            <button type="button" data-color="B" class="color-btn">B</button>
+            <button type="button" data-color="R" class="color-btn">R</button>
+            <button type="button" data-color="G" class="color-btn">G</button>
+          </div>
+          <input type="hidden" name="color_identity" id="editColorInput">
+          <p id="editColorHint" class="text-xs text-red-400 mt-1 hidden">Seleziona almeno un colore.</p>
         </div>
       </div>
       <div class="flex gap-3 justify-end mt-5">
@@ -121,13 +135,96 @@
   </div>
 </div>
 
+<style>
+.color-btn {
+  width: 2.25rem; height: 2.25rem;
+  border-radius: 9999px;
+  border: 2px solid #334155;
+  background: transparent;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s;
+}
+.color-btn:hover { transform: scale(1.1); }
+.color-btn.active { transform: scale(1.12); }
+</style>
+
 <script>
+// ── Color picker ──────────────────────────────────────────────────────────
+const COLOR_ORDER = ['W','U','B','R','G'];
+const COLOR_BG    = { W:'#f3f4f6', U:'#3b82f6', B:'#6b7280', R:'#ef4444', G:'#22c55e' };
+const COLOR_FG    = { W:'#111827', U:'#ffffff', B:'#ffffff', R:'#ffffff', G:'#ffffff' };
+
+function makeColorPicker(groupId, inputId) {
+  const group  = document.getElementById(groupId);
+  const input  = document.getElementById(inputId);
+  const active = new Set();
+
+  function refresh() {
+    group.querySelectorAll('[data-color]').forEach(btn => {
+      const c  = btn.dataset.color;
+      const on = active.has(c);
+      btn.style.background   = on ? COLOR_BG[c] : 'transparent';
+      btn.style.color        = on ? COLOR_FG[c] : '#94a3b8';
+      btn.style.borderColor  = on ? COLOR_BG[c] : '#334155';
+      btn.classList.toggle('active', on);
+    });
+    input.value = COLOR_ORDER.filter(c => active.has(c)).join('');
+  }
+
+  group.querySelectorAll('[data-color]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const c = btn.dataset.color;
+      active.has(c) ? active.delete(c) : active.add(c);
+      refresh();
+    });
+  });
+
+  refresh();
+
+  return {
+    set(str) {
+      active.clear();
+      for (const ch of (str || '')) if (COLOR_ORDER.includes(ch)) active.add(ch);
+      refresh();
+    },
+    get() { return input.value; },
+    reset() { active.clear(); refresh(); },
+  };
+}
+
+const addPicker  = makeColorPicker('addColorBtns',  'addColorInput');
+const editPicker = makeColorPicker('editColorBtns', 'editColorInput');
+
+// ── Form validation ───────────────────────────────────────────────────────
+document.getElementById('addForm').addEventListener('submit', e => {
+  const hint = document.getElementById('addColorHint');
+  if (!addPicker.get()) {
+    e.preventDefault();
+    hint.classList.remove('hidden');
+  } else {
+    hint.classList.add('hidden');
+  }
+});
+
+document.getElementById('editForm').addEventListener('submit', e => {
+  const hint = document.getElementById('editColorHint');
+  if (!editPicker.get()) {
+    e.preventDefault();
+    hint.classList.remove('hidden');
+  } else {
+    hint.classList.add('hidden');
+  }
+});
+
 // ── Table sorting ─────────────────────────────────────────────────────────
-let sortCol = -1, sortAsc = false;  // -1 so first call on col 2 won't flip
+let sortCol = -1, sortAsc = false;
 
 function sortTable(col, type) {
   if (sortCol === col) sortAsc = !sortAsc;
-  else { sortCol = col; sortAsc = false; }  // false = descending
+  else { sortCol = col; sortAsc = false; }
 
   const tbody = document.getElementById('cmdTbody');
   const rows  = Array.from(tbody.querySelectorAll('tr:not([id^="detail"])'));
@@ -143,7 +240,6 @@ function sortTable(col, type) {
 
   rows.forEach(r => tbody.appendChild(r));
 
-  // Update sort icons
   document.querySelectorAll('.sortable').forEach(th => {
     const icon = th.querySelector('.sort-icon');
     if (parseInt(th.dataset.col) === col)
@@ -158,19 +254,29 @@ document.querySelectorAll('.sortable').forEach(th => {
   th.style.userSelect = 'none';
 });
 
-// Apply default sort on load
 sortTable(sortCol, 'num');
+
+// ── Modal helpers ─────────────────────────────────────────────────────────
+function closeAdd() {
+  addPicker.reset();
+  document.getElementById('addColorHint').classList.add('hidden');
+  document.getElementById('addModal').classList.add('hidden');
+}
 
 function openEdit(id, name, color) {
   document.getElementById('editForm').action = `/commanders/${id}/edit`;
   document.getElementById('editName').value = name;
-  document.getElementById('editColor').value = color;
+  editPicker.set(color);
+  document.getElementById('editColorHint').classList.add('hidden');
   document.getElementById('editModal').classList.remove('hidden');
 }
-// Close modals on backdrop click
+
 ['addModal','editModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
-    if (e.target === this) this.classList.add('hidden');
+    if (e.target === this) {
+      if (id === 'addModal') closeAdd();
+      else this.classList.add('hidden');
+    }
   });
 });
 </script>

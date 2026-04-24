@@ -106,11 +106,25 @@
   </div>
 </div>
 
-<!-- ── Sol Ring row ────────────────────────────────────────────────────── -->
-<div class="grid grid-cols-1 gap-6 mb-6">
+<!-- ── Sol Ring ranking ───────────────────────────────────────────────── -->
+<div class="mb-6">
   <div class="card p-5">
-    <h2 class="text-sm font-semibold text-slate-300 mb-4">🪙 Sol Ring al Turno 1 per Giocatore</h2>
-    <canvas id="chartSolRing" height="100"></canvas>
+    <h2 class="text-sm font-semibold text-slate-300 mb-3">🪙 Sol Ring al Turno 1</h2>
+    {% set sorted_sr = player_stats | sort(attribute='sol_rings', reverse=True) %}
+    <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
+      {% for p in sorted_sr %}
+      <div class="text-center rounded-lg px-3 py-3"
+           style="{% if loop.first %}background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25){% else %}background:#0f1117;border:1px solid #2d3147{% endif %}">
+        <div class="font-bold tabular-nums {% if loop.first %}text-3xl text-amber-400{% else %}text-xl text-slate-300{% endif %}">
+          {{ p.sol_rings }}
+        </div>
+        <div class="text-xs mt-1 truncate {% if loop.first %}text-amber-300 font-semibold{% else %}text-slate-500{% endif %}">
+          {{ p.name }}
+        </div>
+        {% if loop.first %}<div class="text-amber-600 text-xs mt-0.5">💍 Lord of the Rings</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </div>
 
@@ -281,17 +295,6 @@ function setPlayerTab(tab) {
   document.getElementById('btnPlayerWins').classList.toggle('tab-active',  isWins);
   document.getElementById('btnPlayerRate').classList.toggle('tab-active', !isWins);
 }
-
-/* ── Chart Sol Ring ───────────────────────────────────────────── */
-new Chart(document.getElementById('chartSolRing'), {
-  type: 'bar',
-  data: {
-    labels: PLAYER_STATS.map(p => p.name),
-    datasets: [{ label: 'Sol Ring T1', data: PLAYER_STATS.map(p => p.sol_rings),
-                 backgroundColor: '#f59e0b', borderRadius: 6 }]
-  },
-  options: { ...CHART_DEFAULTS, responsive: true }
-});
 
 /* ── Chart 3: Top Commander — tabs Vittorie / Kill ────────────── */
 const topCmds = COMMANDER_STATS.filter(c => c.wins > 0).slice(0, 12);
