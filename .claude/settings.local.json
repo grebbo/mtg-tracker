@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(C:\\\\Users\\\\enric\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\scripts\\\\start-server.sh --project-dir \"c:\\\\Users\\\\enric\\\\Documents\\\\Projects\\\\mtg-tracker\")",
+      "Bash(mkdir -p \"c:/Users/enric/Documents/Projects/mtg-tracker/docs/superpowers/specs\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\enric\\Documents\\Projects\\mtg-tracker\\docs\\superpowers"
+    ]
+  }
+}

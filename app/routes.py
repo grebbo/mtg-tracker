@@ -281,7 +281,8 @@ def game_new():
             winner_idx = next((j for j, s in enumerate(slot_data) if s['is_winner']), None)
             finishes = _compute_finish_ranks(winner_idx, slot_data)
             loser_turns = [s['turn_eliminated'] for s in slot_data if not s['is_winner'] and s['turn_eliminated']]
-            total_turns = max(loser_turns) if loser_turns else None
+            form_total_turns = request.form.get('total_turns', type=int)
+            total_turns = form_total_turns if form_total_turns else (max(loser_turns) if loser_turns else None)
 
             game = Game(date=game_date, total_turns=total_turns)
             db.session.add(game)
@@ -361,7 +362,8 @@ def game_edit(game_id):
             winner_idx = next((j for j, s in enumerate(slot_data) if s['is_winner']), None)
             finishes = _compute_finish_ranks(winner_idx, slot_data)
             loser_turns = [s['turn_eliminated'] for s in slot_data if not s['is_winner'] and s['turn_eliminated']]
-            game.total_turns = max(loser_turns) if loser_turns else None
+            form_total_turns = request.form.get('total_turns', type=int)
+            game.total_turns = form_total_turns if form_total_turns else (max(loser_turns) if loser_turns else None)
 
             for entry in game.entries:
                 db.session.delete(entry)

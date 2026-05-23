@@ -11,6 +11,7 @@
         action="{{ url_for('main.game_edit', game_id=game.id) if game else url_for('main.game_new') }}">
 
     <input type="hidden" name="num_players" id="numPlayersInput" value="0">
+    <input type="hidden" name="total_turns" id="totalTurnsInput" value="">
 
     <!-- Date -->
     <div class="card p-4 mb-4">
@@ -214,6 +215,7 @@ if (prefill) {
     turn_eliminated: r.turn_eliminated,
   }));
   syncWinnerUI();
+  if (prefill.total_turns) document.getElementById('totalTurnsInput').value = prefill.total_turns;
 } else if (INIT_DATA.length) {
   INIT_DATA.forEach(d => addRow(d));
 } else {
