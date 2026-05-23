@@ -133,9 +133,6 @@
   }
   #end-game-btn:hover { background: #991b1b; }
 
-  /* ── edit modal (hidden pending HTML removal in next task) ─── */
-  #edit-modal { display: none; }
-
   /* ── auto-end overlay ─────────────────────────── */
   #end-overlay {
     display: none; position: fixed; inset: 0; z-index: 100;
@@ -162,55 +159,32 @@
 
 {% block content %}
 
-<!-- ══ SETUP SCREEN ══════════════════════════════════════════ -->
-<div id="live-setup">
-  <h1 class="text-xl font-bold text-white mb-6">⚔️ Nuova Partita Live</h1>
-
-  <!-- Player count -->
-  <div class="card p-4 mb-4">
-    <label class="mb-2">Numero di giocatori</label>
-    <div class="flex gap-2">
-      {% for n in [2,3,4,5,6] %}
-      <button type="button"
-              class="count-btn btn-sm px-3 py-1.5 font-bold {% if n == 4 %}ring-2 ring-mtg-accent{% endif %}"
-              data-count="{{ n }}">{{ n }}</button>
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- Seat slots -->
-  <div id="seat-slots" class="mb-4">
-    {% for i in range(6) %}
-    <div class="seat-slot {% if i >= 4 %}hidden{% endif %}" data-seat="{{ i }}">
-      <div class="text-xs text-slate-500 mb-2 font-medium">Posto {{ i + 1 }}</div>
-      <div class="flex gap-2">
-        <select class="seat-player flex-1" data-seat="{{ i }}">
-          <option value="">— Giocatore —</option>
-        </select>
-        <select class="seat-commander flex-1" data-seat="{{ i }}">
-          <option value="">— Commander —</option>
-        </select>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- resume banner -->
-  <div id="resume-banner" class="hidden card p-4 mb-4" style="border-color:#f59e0b">
-    <p class="text-amber-300 text-sm mb-2">⚠ C'è una partita in corso non terminata.</p>
-    <div class="flex gap-2">
-      <button id="resume-btn" class="btn-primary text-sm">Riprendi</button>
-      <button id="discard-btn" class="btn-sm text-sm">Scarta</button>
-    </div>
-  </div>
-
-  <button id="start-btn" class="btn-primary w-full py-3 text-base font-bold opacity-50 cursor-not-allowed" disabled>
-    Inizia Partita
-  </button>
-</div>
-
 <!-- ══ PLAY SCREEN ═══════════════════════════════════════════ -->
 <div id="live-play">
+  <!-- Setup center (visible during setup phase) -->
+  <div id="setup-center">
+    <!-- Resume banner (shown instead of controls when a saved game exists) -->
+    <div id="resume-banner" style="display:none">
+      <p style="color:#fbbf24;font-size:0.85rem;margin-bottom:0.5rem">⚠ C'è una partita in corso non terminata.</p>
+      <div style="display:flex;gap:0.5rem;justify-content:center">
+        <button id="resume-btn" class="btn-primary text-sm" style="padding:0.3rem 0.8rem">Riprendi</button>
+        <button id="discard-btn" class="btn-sm text-sm" style="padding:0.3rem 0.8rem">Scarta</button>
+      </div>
+    </div>
+    <!-- Player count + start controls -->
+    <div id="setup-controls">
+      <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:0.4rem">Numero di giocatori</div>
+      <div style="display:flex;gap:0.4rem;margin-bottom:0.75rem">
+        {% for n in [2,3,4,5,6] %}
+        <button type="button"
+                class="count-btn btn-sm px-3 py-1.5 font-bold {% if n == 4 %}ring-2 ring-mtg-accent{% endif %}"
+                data-count="{{ n }}">{{ n }}</button>
+        {% endfor %}
+      </div>
+      <button id="setup-start-btn" disabled>Inizia Partita</button>
+    </div>
+  </div>
+
   <div id="play-grid"></div>
 
   <!-- Turn center -->
@@ -219,25 +193,6 @@
     <span id="turn-num" title="Premi a lungo per terminare">1</span>
     <button class="turn-btn" id="turn-plus">+</button>
     <button id="end-game-btn">Termina partita</button>
-  </div>
-
-  <!-- Edit modal -->
-  <div id="edit-modal">
-    <div id="edit-modal-inner">
-      <h3 class="text-white font-semibold">Modifica posizione</h3>
-      <div>
-        <label>Giocatore</label>
-        <select id="edit-player-sel"></select>
-      </div>
-      <div>
-        <label>Commander</label>
-        <select id="edit-commander-sel"></select>
-      </div>
-      <div class="flex gap-2">
-        <button id="edit-confirm" class="btn-primary flex-1">Conferma</button>
-        <button id="edit-cancel" class="btn-sm flex-1">Annulla</button>
-      </div>
-    </div>
   </div>
 
   <!-- Auto-end overlay -->
