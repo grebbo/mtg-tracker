@@ -66,7 +66,7 @@ def _compute_player_stats():
 
 
 def _compute_commander_stats():
-    cmds = Commander.query.order_by(Commander.name).all()
+    cmds = Commander.known().all()
     result = []
     for c in cmds:
         entries = GameEntry.query.filter_by(commander_id=c.id).all()
@@ -241,7 +241,7 @@ def dashboard():
 @main.route('/live')
 def live():
     players = Player.query.order_by(Player.name).all()
-    commanders = Commander.query.order_by(Commander.name).all()
+    commanders = Commander.known().all()
     players_json = [{'id': p.id, 'name': p.name} for p in players]
     commanders_json = [{'id': c.id, 'name': c.name, 'color_identity': c.color_identity} for c in commanders]
     return render_template('live.html', players_json=players_json, commanders_json=commanders_json)
@@ -252,7 +252,7 @@ def live():
 @main.route('/game/new', methods=['GET', 'POST'])
 def game_new():
     players = Player.query.order_by(Player.name).all()
-    commanders = Commander.query.order_by(Commander.name).all()
+    commanders = Commander.known().all()
 
     if request.method == 'POST':
         try:
@@ -333,7 +333,7 @@ def game_new():
 def game_edit(game_id):
     game = Game.query.get_or_404(game_id)
     players = Player.query.order_by(Player.name).all()
-    commanders = Commander.query.order_by(Commander.name).all()
+    commanders = Commander.known().all()
 
     if request.method == 'POST':
         try:
@@ -459,7 +459,7 @@ def history():
 
     games = query.paginate(page=page, per_page=15, error_out=False)
     players = Player.query.order_by(Player.name).all()
-    commanders = Commander.query.order_by(Commander.name).all()
+    commanders = Commander.known().all()
 
     return render_template(
         'history.html',

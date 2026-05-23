@@ -51,6 +51,10 @@ class Commander(db.Model):
     kills = db.relationship('GameEntry', foreign_keys='GameEntry.eliminated_by_id',
                             backref='eliminated_by_commander', lazy=True)
 
+    @classmethod
+    def known(cls):
+        return cls.query.filter(cls.color_identity != '?').order_by(cls.name)
+
 
 class Game(db.Model):
     __tablename__ = 'games'

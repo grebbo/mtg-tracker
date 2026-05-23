@@ -10,11 +10,11 @@
   body.live-play main { padding: 0 !important; max-width: none !important; }
 
   /* ── play screen ──────────────────────────────── */
-  #live-play { display: block; position: fixed; inset: 0; background: #000; overflow: hidden; touch-action: none; }
-  #play-grid { position: absolute; inset: 0; display: grid; gap: 2px; background: #111; }
+  #live-play { display: block; position: fixed; inset: 0; background: #111; overflow: hidden; touch-action: none; }
+  #play-grid { position: absolute; inset: 4px; display: grid; gap: 4px; }
 
   /* ── tile ─────────────────────────────────────── */
-  .tile { position: relative; overflow: hidden; background: #0a0a0a; cursor: pointer; user-select: none; }
+  .tile { position: relative; overflow: hidden; background: #0a0a0a; cursor: pointer; user-select: none; border-radius: 8px; }
   .tile.eliminated { opacity: 0.35; }
   .tile.sorteggio-highlight { background: #3b0764; }
   .tile-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
@@ -31,6 +31,7 @@
   .tile-edit-content {
     display: none; flex-direction: column; align-items: center; justify-content: center;
     gap: 0.4rem; padding: 0.5rem; width: 100%; height: 100%; overflow-y: auto;
+    touch-action: auto; pointer-events: auto;
   }
 
   /* toggle */
@@ -50,6 +51,7 @@
     font-size: clamp(0.6rem, 2vw, 0.8rem); max-width: 90%;
     background: rgba(0,0,0,0.4); color: inherit;
     border: 1px solid rgba(255,255,255,0.2); border-radius: 0.35rem; padding: 0.2rem 0.3rem;
+    touch-action: auto; pointer-events: auto; user-select: auto;
   }
   .tile-ok-btn {
     margin-top: 0.2rem; padding: 0.25rem 1.2rem;
@@ -90,11 +92,18 @@
     display: none;
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 50; align-items: center; gap: 0.5rem;
+    z-index: 50; align-items: center; gap: 0.4rem;
     background: rgba(0,0,0,0.75); border-radius: 1rem;
-    padding: 0.4rem 0.75rem; backdrop-filter: blur(6px);
+    padding: 0.5rem 0.75rem; backdrop-filter: blur(6px);
     border: 1px solid rgba(255,255,255,0.08);
   }
+  #turn-row { position: relative; display: flex; align-items: center; gap: 0.5rem; }
+  #home-btn {
+    white-space: nowrap; background: #1e3a5f; color: #93c5fd;
+    border: none; padding: 0.4rem 1rem; border-radius: 0.5rem;
+    font-size: 0.78rem; cursor: pointer; font-weight: 600;
+  }
+  #home-btn:hover { background: #1e40af; }
 
   /* ── setup center ─────────────────────────────── */
   #setup-center {
@@ -113,6 +122,12 @@
   }
   #setup-start-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   #setup-start-btn:not(:disabled):hover { background: #6d28d9; }
+  #setup-back-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: #94a3b8; font-size: 0.9rem; cursor: pointer;
+    padding: 0.4rem 0.65rem; border-radius: 0.4rem; line-height: 1; flex-shrink: 0;
+  }
+  #setup-back-btn:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.4); }
   .turn-btn {
     background: transparent; border: none; color: #94a3b8;
     font-size: 1.3rem; cursor: pointer; padding: 0 0.2rem; line-height: 1;
@@ -124,9 +139,13 @@
     border-radius: 0.4rem; padding: 0 0.2rem;
   }
   #turn-num[contenteditable="true"] { background: #1e293b; outline: none; }
-  #end-game-btn {
+  #long-press-actions {
     display: none; position: absolute; top: calc(100% + 0.5rem);
     left: 50%; transform: translateX(-50%);
+    flex-direction: row; gap: 0.5rem; align-items: center;
+  }
+  #long-press-actions.visible { display: flex; }
+  #end-game-btn {
     white-space: nowrap; background: #7f1d1d; color: #fca5a5;
     border: none; padding: 0.4rem 1rem; border-radius: 0.5rem;
     font-size: 0.78rem; cursor: pointer; font-weight: 600;
@@ -181,7 +200,10 @@
                 data-count="{{ n }}">{{ n }}</button>
         {% endfor %}
       </div>
-      <button id="setup-start-btn" disabled>Inizia Partita</button>
+      <div style="display:flex;align-items:center;gap:0.5rem;width:100%">
+        <button id="setup-back-btn">←</button>
+        <button id="setup-start-btn" disabled style="flex:1">Inizia Partita</button>
+      </div>
     </div>
   </div>
 
@@ -189,10 +211,15 @@
 
   <!-- Turn center -->
   <div id="turn-center">
-    <button class="turn-btn" id="turn-minus">−</button>
-    <span id="turn-num" title="Premi a lungo per terminare">1</span>
-    <button class="turn-btn" id="turn-plus">+</button>
-    <button id="end-game-btn">Termina partita</button>
+    <div id="turn-row">
+      <button class="turn-btn" id="turn-minus">−</button>
+      <span id="turn-num" title="Premi a lungo per terminare">1</span>
+      <button class="turn-btn" id="turn-plus">+</button>
+      <div id="long-press-actions">
+        <button id="home-btn">⌂ Home</button>
+        <button id="end-game-btn">Termina partita</button>
+      </div>
+    </div>
   </div>
 
   <!-- Auto-end overlay -->
@@ -224,22 +251,17 @@ const STATE_KEY  = 'mtg_live_game';
 window._liveInteractionsBound = false;
 
 const TILE_COLORS = [
-  '#e83e8c',  // Rosa
-  '#f0f0f0',  // Bianco
   '#0dcaf0',  // Cyan
-  '#343a40',  // Charcoal
-  '#198754',  // Verde
   '#ffc107',  // Ambra
-  '#6f42c1',  // Viola
   '#fd7e14',  // Arancio
+  '#51cf66',  // Verde
+  '#f783ac',  // Rosa
+  '#e599f7',  // Lavanda
+  '#74c0fc',  // Azzurro
+  '#a9e34b',  // Lime
 ];
 
-function textColor(hex) {
-  const r = parseInt(hex.slice(1,3), 16);
-  const g = parseInt(hex.slice(3,5), 16);
-  const b = parseInt(hex.slice(5,7), 16);
-  return (0.299*r + 0.587*g + 0.114*b) > 128 ? '#000000' : '#ffffff';
-}
+function textColor() { return '#000000'; }
 
 function assignColors(count) {
   const shuffled = [...TILE_COLORS].sort(() => Math.random() - 0.5);
@@ -305,17 +327,22 @@ function setTileEditMode(state, slotIdx) {
   tile.classList.add('tile-editing');
 }
 
+const countBtns = Array.from(document.querySelectorAll('.count-btn'));
+function updateCountBtns(n) {
+  countBtns.forEach(btn => {
+    const match = parseInt(btn.dataset.count) === n;
+    btn.classList.toggle('ring-2', match);
+    btn.classList.toggle('ring-mtg-accent', match);
+  });
+}
+
 function initSetupPhase(count) {
   const state = makeSetupState(count);
   window._liveState = state;
   saveState(state);
   buildGrid(state);
   updateStartBtn(state);
-  document.querySelectorAll('.count-btn').forEach(btn => {
-    const n = parseInt(btn.dataset.count);
-    btn.classList.toggle('ring-2', n === count);
-    btn.classList.toggle('ring-mtg-accent', n === count);
-  });
+  updateCountBtns(count);
   bindGridInteractions(state);
 }
 
@@ -333,6 +360,7 @@ function changePlayerCount(state, newCount) {
   saveState(state);
   buildGrid(state);
   updateStartBtn(state);
+  updateCountBtns(newCount);
 }
 
 // ── State helpers ──────────────────────────────────────────────
@@ -362,13 +390,13 @@ const LAYOUT_CONFIG = {
   2: { rows: '1fr 1fr', cols: '1fr',
        slots: [[2,1,1,1,0], [1,1,1,1,180]] },
   3: { rows: '1fr 1fr', cols: '1fr 1fr',
-       slots: [[2,1,1,2,0], [1,1,1,1,180], [1,2,1,1,180]] },
+       slots: [[2,1,1,1,0], [1,1,1,1,180], [1,2,2,1,270]] },
   4: { rows: '1fr 1fr', cols: '1fr 1fr',
        slots: [[2,1,1,1,0], [2,2,1,1,0], [1,1,1,1,180], [1,2,1,1,180]] },
-  5: { rows: '1fr 1fr 1fr', cols: '1fr 1fr',
-       slots: [[3,1,1,1,0], [3,2,1,1,0], [2,2,1,1,90], [1,1,1,1,180], [1,2,1,1,180]] },
-  6: { rows: '1fr 1fr 1fr', cols: '1fr 1fr',
-       slots: [[3,1,1,1,0], [3,2,1,1,0], [2,2,1,1,90], [1,1,1,1,180], [1,2,1,1,180], [2,1,1,1,270]] },
+  5: { rows: '1fr 1fr', cols: '1fr 1fr 1fr',
+       slots: [[2,1,1,1,0], [2,2,1,1,0], [1,1,1,1,180], [1,2,1,1,180], [1,3,2,1,270]] },
+  6: { rows: '1fr 1fr', cols: '1fr 1fr 1fr 1fr',
+       slots: [[1,1,2,1,90], [2,2,1,1,0], [2,3,1,1,0], [1,2,1,1,180], [1,3,1,1,180], [1,4,2,1,270]] },
 };
 
 document.querySelectorAll('.count-btn').forEach(btn => {
@@ -698,6 +726,18 @@ let turnLongPressTimer = null;
 let endGameVisible = false;
 let turnLongPressed = false;
 
+document.getElementById('setup-back-btn').addEventListener('click', () => {
+  clearState();
+  window.location.href = '/';
+});
+
+document.getElementById('home-btn').addEventListener('click', () => {
+  const exit = document.fullscreenElement
+    ? document.exitFullscreen()
+    : Promise.resolve();
+  exit.catch(() => {}).finally(() => { window.location.href = '/'; });
+});
+
 document.getElementById('turn-minus').addEventListener('click', () => {
   const state = window._liveState;
   if (!state) return;
@@ -742,7 +782,7 @@ document.getElementById('turn-num').addEventListener('pointerdown', () => {
   turnLongPressTimer = setTimeout(() => {
     turnLongPressed = true;
     endGameVisible = !endGameVisible;
-    document.getElementById('end-game-btn').style.display = endGameVisible ? 'block' : 'none';
+    document.getElementById('long-press-actions').classList.toggle('visible', endGameVisible);
   }, LONG_PRESS_MS);
 });
 

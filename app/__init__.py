@@ -5,6 +5,17 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
+def _purge_invalid_commanders():
+    from app.models import Commander, GameEntry
+    used = db.session.query(GameEntry.commander_id).distinct().subquery()
+    removed = Commander.query.filter(
+        Commander.color_identity == '?',
+        ~Commander.id.in_(used),
+    ).delete(synchronize_session='fetch')
+    if removed:
+        db.session.commit()
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -29,6 +40,7 @@ def create_app():
             db.drop_all()
         db.create_all()
         models.seed_initial_data()
+        _purge_invalid_commanders()
 
     from app.routes import main
     app.register_blueprint(main)
