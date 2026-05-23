@@ -360,26 +360,38 @@ document.querySelectorAll('.count-btn').forEach(btn => {
   btn.addEventListener('click', () => changePlayerCount(window._liveState, parseInt(btn.dataset.count)));
 });
 
-// Resume banner
-const saved = getState();
-if (saved && saved.phase === 'play') {
-  document.getElementById('resume-banner').style.display = 'block';
-}
-document.getElementById('resume-btn').addEventListener('click', () => {
-  enterPlay(getState());
-});
-document.getElementById('discard-btn').addEventListener('click', () => {
-  clearState();
-  document.getElementById('resume-banner').style.display = 'none';
-});
-
 document.getElementById('setup-start-btn')?.addEventListener('click', () => {
   const state = window._liveState;
   if (!state || state.phase !== 'setup') return;
   enterPlay(state, true);
 });
 
-initSetupPhase(4);
+// ── Page load ──────────────────────────────────────────────────
+document.body.classList.add('live-play');
+
+document.getElementById('resume-btn').addEventListener('click', () => {
+  const saved = getState();
+  if (saved) enterPlay(saved);
+});
+
+document.getElementById('discard-btn').addEventListener('click', () => {
+  clearState();
+  document.getElementById('resume-banner').style.display = 'none';
+  document.getElementById('setup-controls').style.display = '';
+  initSetupPhase(4);
+});
+
+// Check for saved play-phase game
+const saved = getState();
+if (saved && saved.phase === 'play') {
+  window._liveState = saved;
+  buildGrid(saved);
+  bindGridInteractions(saved);
+  document.getElementById('resume-banner').style.display = 'block';
+  document.getElementById('setup-controls').style.display = 'none';
+} else {
+  initSetupPhase(4);
+}
 
 // ── Grid layout config ─────────────────────────────────────────
 const LAYOUT_CONFIG = {
@@ -458,21 +470,23 @@ function updateTurnDisplay(state) {
 
 // ── enterPlay ──────────────────────────────────────────────────
 function enterPlay(state, runSorteggio = false) {
-  const setupEl = document.getElementById('live-setup');
-  if (setupEl) setupEl.style.display = 'none';
-  document.getElementById('live-play').style.display = 'block';
-  document.body.classList.add('live-play');
+  const playState = makePlayState(state);
+  window._liveState = playState;
+  saveState(playState);
+
+  document.getElementById('setup-center').classList.add('hidden');
+  document.getElementById('turn-center').style.display = 'flex';
 
   const el = document.documentElement;
   if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
 
-  buildGrid(state);
-  updateTurnDisplay(state);
+  buildGrid(playState);
+  updateTurnDisplay(playState);
 
   if (runSorteggio) {
-    startSorteggio(state);
+    startSorteggio(playState);
   } else {
-    bindPlayInteractions(state);
+    bindGridInteractions(playState);
   }
 }
 
@@ -505,7 +519,7 @@ function startSorteggio(state) {
         state.firstPlayerIndex = winnerIdx;
         saveState(state);
         document.getElementById('play-grid').style.pointerEvents = '';
-        bindPlayInteractions(state);
+        bindGridInteractions(state);
       }, 900);
       return;
     }
@@ -593,7 +607,7 @@ document.getElementById('hp-input-cancel').addEventListener('click', () => {
   hpInputSlot = null;
 });
 
-function bindPlayInteractions(state) {
+function bindGridInteractions(state) {
   window._liveState = state;
   if (window._liveInteractionsBound) return;
   window._liveInteractionsBound = true;
@@ -602,14 +616,12 @@ function bindPlayInteractions(state) {
 
   grid.addEventListener('pointerdown', e => {
     const tile = e.target.closest('.tile');
-    if (!tile) return;
-    if (e.target.closest('button')) return;
-
+    if (!tile || e.target.closest('button') || e.target.closest('select')) return;
+    if (tile.classList.contains('tile-editing')) return;
     const slotIdx = parseInt(tile.dataset.slot);
-
     longPressTimer = setTimeout(() => {
       longPressTimer = null;
-      openHpInput(state, slotIdx);
+      openHpInput(window._liveState, slotIdx);
     }, LONG_PRESS_MS);
   });
 
@@ -620,17 +632,15 @@ function bindPlayInteractions(state) {
     } else {
       return;
     }
-
     const tile = e.target.closest('.tile');
-    if (!tile || e.target.closest('button')) return;
-    if (state.slots[parseInt(tile.dataset.slot)].eliminated) return;
-
+    if (!tile || e.target.closest('button') || e.target.closest('select')) return;
+    if (tile.classList.contains('tile-editing')) return;
     const slotIdx = parseInt(tile.dataset.slot);
+    if (window._liveState.slots[slotIdx].eliminated) return;
     const rotate = parseInt(tile.dataset.rotate);
     const rect = tile.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
-
     let isRight;
     switch (rotate) {
       case 0:   isRight = cx > rect.width / 2;  break;
@@ -639,7 +649,7 @@ function bindPlayInteractions(state) {
       case 270: isRight = cy > rect.height / 2; break;
       default:  isRight = cx > rect.width / 2;
     }
-    changeHp(state, slotIdx, isRight ? 1 : -1);
+    changeHp(window._liveState, slotIdx, isRight ? 1 : -1);
   });
 
   grid.addEventListener('pointercancel', () => {
@@ -650,37 +660,39 @@ function bindPlayInteractions(state) {
     const btn = e.target.closest('.sol-btn');
     if (!btn) return;
     const slotIdx = parseInt(btn.dataset.slot);
-    state.slots[slotIdx].solRing = !state.slots[slotIdx].solRing;
-    btn.classList.toggle('sol-active', state.slots[slotIdx].solRing);
-    saveState(state);
+    window._liveState.slots[slotIdx].solRing = !window._liveState.slots[slotIdx].solRing;
+    btn.classList.toggle('sol-active', window._liveState.slots[slotIdx].solRing);
+    saveState(window._liveState);
   });
 
   grid.addEventListener('click', e => {
     const btn = e.target.closest('.edit-btn');
     if (!btn) return;
-    openEditModal(state, parseInt(btn.dataset.slot));
+    setTileEditMode(window._liveState, parseInt(btn.dataset.slot));
+  });
+
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('.tile-ok-btn');
+    if (!btn) return;
+    handleTileOk(window._liveState, parseInt(btn.dataset.slot));
+  });
+
+  grid.addEventListener('click', e => {
+    const swatch = e.target.closest('.color-swatch');
+    if (!swatch) return;
+    const slotIdx = parseInt(swatch.dataset.slot);
+    const color = swatch.dataset.color;
+    window._liveState.slots[slotIdx].color = color;
+    const tile = document.querySelector(`.tile[data-slot="${slotIdx}"]`);
+    const fg = textColor(color);
+    tile.style.background = color;
+    tile.style.color = fg;
+    tile.querySelectorAll('.color-swatch').forEach(s => {
+      s.classList.toggle('selected', s.dataset.color === color);
+    });
+    saveState(window._liveState);
   });
 }
-
-// ── Edit modal ─────────────────────────────────────────────────
-let editSlotIdx = null;
-
-function openEditModal(state, slotIdx) {
-  const pSel = document.getElementById('edit-player-sel');
-  const cSel = document.getElementById('edit-commander-sel');
-  const modal = document.getElementById('edit-modal');
-  if (!pSel || !cSel || !modal) return;
-  editSlotIdx = slotIdx;
-  const slot = state.slots[slotIdx];
-  pSel.innerHTML = PLAYERS.map(p =>
-    `<option value="${p.id}" ${p.id===slot.playerId?'selected':''}>${esc(p.name)}</option>`
-  ).join('');
-  cSel.innerHTML = COMMANDERS.map(c =>
-    `<option value="${c.id}" ${c.id===slot.commanderId?'selected':''}>${esc(c.name)} (${esc(c.color_identity)})</option>`
-  ).join('');
-  modal.classList.add('open');
-}
-
 
 // ── Turn counter ───────────────────────────────────────────────
 let turnLongPressTimer = null;
