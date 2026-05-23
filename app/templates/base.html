@@ -76,6 +76,7 @@
       <div class="flex items-center gap-1 ml-4">
         <a href="/"            class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">Dashboard</a>
         <a href="/game/new"    class="nav-link {% if request.endpoint == 'main.game_new' %}active{% endif %}">+ Partita</a>
+        <a href="/live"        class="nav-link {% if request.endpoint == 'main.live' %}active{% endif %}">Live</a>
         <a href="/history"     class="nav-link {% if request.endpoint == 'main.history' %}active{% endif %}">Storico</a>
         <a href="/commanders"  class="nav-link {% if request.endpoint == 'main.commanders' %}active{% endif %}">Commander</a>
       </div>

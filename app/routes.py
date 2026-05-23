@@ -236,6 +236,17 @@ def dashboard():
     )
 
 
+# ── live ──────────────────────────────────────────────────────────────────────
+
+@main.route('/live')
+def live():
+    players = Player.query.order_by(Player.name).all()
+    commanders = Commander.query.order_by(Commander.name).all()
+    players_json = [{'id': p.id, 'name': p.name} for p in players]
+    commanders_json = [{'id': c.id, 'name': c.name, 'color_identity': c.color_identity} for c in commanders]
+    return render_template('live.html', players_json=players_json, commanders_json=commanders_json)
+
+
 # ── add / edit game ───────────────────────────────────────────────────────────
 
 @main.route('/game/new', methods=['GET', 'POST'])
