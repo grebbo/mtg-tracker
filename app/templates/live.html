@@ -357,6 +357,20 @@ function commanderOptions(selId) {
     COMMANDERS.map(c => `<option value="${c.id}" ${c.id==selId?'selected':''}>${esc(c.name)} (${esc(c.color_identity)})</option>`).join('');
 }
 
+// ── Grid layout config ─────────────────────────────────────────
+const LAYOUT_CONFIG = {
+  2: { rows: '1fr 1fr', cols: '1fr',
+       slots: [[2,1,1,1,0], [1,1,1,1,180]] },
+  3: { rows: '1fr 1fr', cols: '1fr 1fr',
+       slots: [[2,1,1,2,0], [1,1,1,1,180], [1,2,1,1,180]] },
+  4: { rows: '1fr 1fr', cols: '1fr 1fr',
+       slots: [[2,1,1,1,0], [2,2,1,1,0], [1,1,1,1,180], [1,2,1,1,180]] },
+  5: { rows: '1fr 1fr 1fr', cols: '1fr 1fr',
+       slots: [[3,1,1,1,0], [3,2,1,1,0], [2,2,1,1,90], [1,1,1,1,180], [1,2,1,1,180]] },
+  6: { rows: '1fr 1fr 1fr', cols: '1fr 1fr',
+       slots: [[3,1,1,1,0], [3,2,1,1,0], [2,2,1,1,90], [1,1,1,1,180], [1,2,1,1,180], [2,1,1,1,270]] },
+};
+
 document.querySelectorAll('.count-btn').forEach(btn => {
   btn.addEventListener('click', () => changePlayerCount(window._liveState, parseInt(btn.dataset.count)));
 });
@@ -391,20 +405,6 @@ if (saved && saved.phase === 'play') {
 } else {
   initSetupPhase(4);
 }
-
-// ── Grid layout config ─────────────────────────────────────────
-const LAYOUT_CONFIG = {
-  2: { rows: '1fr 1fr', cols: '1fr',
-       slots: [[2,1,1,1,0], [1,1,1,1,180]] },
-  3: { rows: '1fr 1fr', cols: '1fr 1fr',
-       slots: [[2,1,1,2,0], [1,1,1,1,180], [1,2,1,1,180]] },
-  4: { rows: '1fr 1fr', cols: '1fr 1fr',
-       slots: [[2,1,1,1,0], [2,2,1,1,0], [1,1,1,1,180], [1,2,1,1,180]] },
-  5: { rows: '1fr 1fr 1fr', cols: '1fr 1fr',
-       slots: [[3,1,1,1,0], [3,2,1,1,0], [2,2,1,1,90], [1,1,1,1,180], [1,2,1,1,180]] },
-  6: { rows: '1fr 1fr 1fr', cols: '1fr 1fr',
-       slots: [[3,1,1,1,0], [3,2,1,1,0], [2,2,1,1,90], [1,1,1,1,180], [1,2,1,1,180], [2,1,1,1,270]] },
-};
 
 // ── Build play grid ────────────────────────────────────────────
 function buildGrid(state) {
