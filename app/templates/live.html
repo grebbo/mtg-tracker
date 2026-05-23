@@ -290,6 +290,7 @@ function validateSetup() {
     return p && c;
   });
   const btn = document.getElementById('start-btn');
+  if (!btn) return;
   btn.disabled = !allFilled;
   btn.classList.toggle('opacity-50', !allFilled);
   btn.classList.toggle('cursor-not-allowed', !allFilled);
@@ -315,7 +316,7 @@ document.getElementById('discard-btn').addEventListener('click', () => {
   document.getElementById('resume-banner').classList.add('hidden');
 });
 
-document.getElementById('start-btn').addEventListener('click', () => {
+document.getElementById('start-btn')?.addEventListener('click', () => {
   const slots = Array.from(document.querySelectorAll('.seat-slot'))
     .slice(0, selectedCount)
     .map(slot => {
@@ -395,7 +396,8 @@ function updateTurnDisplay(state) {
 
 // ── enterPlay ──────────────────────────────────────────────────
 function enterPlay(state, runSorteggio = false) {
-  document.getElementById('live-setup').style.display = 'none';
+  const setupEl = document.getElementById('live-setup');
+  if (setupEl) setupEl.style.display = 'none';
   document.getElementById('live-play').style.display = 'block';
   document.body.classList.add('live-play');
 
@@ -618,28 +620,6 @@ function openEditModal(state, slotIdx) {
   document.getElementById('edit-modal').classList.add('open');
 }
 
-document.getElementById('edit-confirm').addEventListener('click', () => {
-  if (editSlotIdx === null) return;
-  const state = window._liveState;
-  const pId = parseInt(document.getElementById('edit-player-sel').value);
-  const cId = parseInt(document.getElementById('edit-commander-sel').value);
-  const player = PLAYERS.find(p => p.id === pId);
-  const commander = COMMANDERS.find(c => c.id === cId);
-  state.slots[editSlotIdx].playerId = pId;
-  state.slots[editSlotIdx].playerName = player?.name ?? '';
-  state.slots[editSlotIdx].commanderId = cId;
-  state.slots[editSlotIdx].commanderName = commander?.name ?? '';
-  saveState(state);
-  buildGrid(state);
-  bindPlayInteractions(state);
-  document.getElementById('edit-modal').classList.remove('open');
-  editSlotIdx = null;
-});
-
-document.getElementById('edit-cancel').addEventListener('click', () => {
-  document.getElementById('edit-modal').classList.remove('open');
-  editSlotIdx = null;
-});
 
 // ── Turn counter ───────────────────────────────────────────────
 let turnLongPressTimer = null;
