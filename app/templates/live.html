@@ -246,23 +246,100 @@ function assignColors(count) {
   return Array.from({ length: count }, (_, i) => shuffled[i % shuffled.length]);
 }
 
+function makeSetupState(playerCount) {
+  const colors = assignColors(6);
+  const slots = Array.from({ length: 6 }, (_, i) => ({
+    playerId: null, playerName: '',
+    commanderId: null, commanderName: '',
+    hp: 40, solRing: false, eliminated: false, turnEliminated: null,
+    color: colors[i], confirmed: false,
+  }));
+  return {
+    phase: 'setup', playerCount,
+    slots, currentTurn: 1, firstPlayerIndex: null,
+    startedAt: new Date().toISOString().slice(0, 10),
+  };
+}
+
+function makePlayState(state) {
+  return { ...state, phase: 'play' };
+}
+
+function updateStartBtn(state) {
+  const allConfirmed = state.slots.slice(0, state.playerCount).every(s => s.confirmed);
+  const btn = document.getElementById('setup-start-btn');
+  if (!btn) return;
+  btn.disabled = !allConfirmed;
+}
+
+function handleTileOk(state, slotIdx) {
+  const tile = document.querySelector(`.tile[data-slot="${slotIdx}"]`);
+  if (!tile) return;
+  const pId = parseInt(tile.querySelector('.tile-player-sel').value);
+  const cId = parseInt(tile.querySelector('.tile-commander-sel').value);
+  if (!pId || !cId) return;
+  const player    = PLAYERS.find(p => p.id === pId);
+  const commander = COMMANDERS.find(c => c.id === cId);
+  const slot = state.slots[slotIdx];
+  slot.playerId      = pId;
+  slot.playerName    = player?.name ?? '';
+  slot.commanderId   = cId;
+  slot.commanderName = commander?.name ?? '';
+  slot.confirmed     = true;
+  tile.querySelector('.tile-hp').textContent   = slot.hp;
+  tile.querySelector('.tile-name').textContent = `${slot.playerName} · ${slot.commanderName}`;
+  tile.classList.remove('tile-editing');
+  saveState(state);
+  if (state.phase === 'setup') updateStartBtn(state);
+}
+
+function setTileEditMode(state, slotIdx) {
+  const tile = document.querySelector(`.tile[data-slot="${slotIdx}"]`);
+  if (!tile) return;
+  const slot = state.slots[slotIdx];
+  tile.querySelector('.tile-player-sel').value    = slot.playerId   ?? '';
+  tile.querySelector('.tile-commander-sel').value = slot.commanderId ?? '';
+  tile.querySelectorAll('.color-swatch').forEach(s => {
+    s.classList.toggle('selected', s.dataset.color === slot.color);
+  });
+  tile.classList.add('tile-editing');
+}
+
+function initSetupPhase(count) {
+  const state = makeSetupState(count);
+  window._liveState = state;
+  saveState(state);
+  buildGrid(state);
+  updateStartBtn(state);
+  document.querySelectorAll('.count-btn').forEach(btn => {
+    const n = parseInt(btn.dataset.count);
+    btn.classList.toggle('ring-2', n === count);
+    btn.classList.toggle('ring-mtg-accent', n === count);
+  });
+}
+
+function changePlayerCount(state, newCount) {
+  const oldCount = state.playerCount;
+  state.playerCount = newCount;
+  if (newCount > oldCount) {
+    const freshColors = assignColors(6);
+    for (let i = oldCount; i < newCount; i++) {
+      if (!state.slots[i].confirmed) {
+        state.slots[i].color = freshColors[i];
+      }
+    }
+  }
+  saveState(state);
+  buildGrid(state);
+  updateStartBtn(state);
+}
+
 // ── State helpers ──────────────────────────────────────────────
 function getState() {
   try { return JSON.parse(localStorage.getItem(STATE_KEY)); } catch { return null; }
 }
 function saveState(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); }
 function clearState() { localStorage.removeItem(STATE_KEY); }
-
-function makeInitialState(playerCount, slots) {
-  return {
-    phase: 'play',
-    playerCount,
-    slots,
-    currentTurn: 1,
-    firstPlayerIndex: null,
-    startedAt: new Date().toISOString().slice(0, 10),
-  };
-}
 
 // ── Setup screen ───────────────────────────────────────────────
 let selectedCount = 4;
