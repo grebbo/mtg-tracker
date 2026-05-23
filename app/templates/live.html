@@ -316,6 +316,7 @@ function initSetupPhase(count) {
     btn.classList.toggle('ring-2', n === count);
     btn.classList.toggle('ring-mtg-accent', n === count);
   });
+  bindGridInteractions(state);
 }
 
 function changePlayerCount(state, newCount) {
@@ -385,8 +386,6 @@ document.getElementById('discard-btn').addEventListener('click', () => {
 const saved = getState();
 if (saved && saved.phase === 'play') {
   window._liveState = saved;
-  buildGrid(saved);
-  bindGridInteractions(saved);
   document.getElementById('resume-banner').style.display = 'block';
   document.getElementById('setup-controls').style.display = 'none';
 } else {
