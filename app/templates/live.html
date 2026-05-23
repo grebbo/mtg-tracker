@@ -342,8 +342,6 @@ function saveState(s) { localStorage.setItem(STATE_KEY, JSON.stringify(s)); }
 function clearState() { localStorage.removeItem(STATE_KEY); }
 
 // ── Setup screen ───────────────────────────────────────────────
-let selectedCount = 4;
-
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -358,49 +356,8 @@ function commanderOptions(selId) {
     COMMANDERS.map(c => `<option value="${c.id}" ${c.id==selId?'selected':''}>${esc(c.name)} (${esc(c.color_identity)})</option>`).join('');
 }
 
-function initSetupSlots(count) {
-  selectedCount = count;
-  document.querySelectorAll('.count-btn').forEach(btn => {
-    btn.classList.toggle('ring-2', parseInt(btn.dataset.count) === count);
-    btn.classList.toggle('ring-mtg-accent', parseInt(btn.dataset.count) === count);
-  });
-  document.querySelectorAll('.seat-slot').forEach((slot, i) => {
-    slot.classList.toggle('hidden', i >= count);
-  });
-  document.querySelectorAll('.seat-player').forEach(sel => {
-    if (!sel.dataset.populated) {
-      sel.innerHTML = playerOptions(null);
-      sel.dataset.populated = '1';
-    }
-  });
-  document.querySelectorAll('.seat-commander').forEach(sel => {
-    if (!sel.dataset.populated) {
-      sel.innerHTML = commanderOptions(null);
-      sel.dataset.populated = '1';
-    }
-  });
-  validateSetup();
-}
-
-function validateSetup() {
-  const slots = Array.from(document.querySelectorAll('.seat-slot')).slice(0, selectedCount);
-  const allFilled = slots.every(slot => {
-    const p = slot.querySelector('.seat-player').value;
-    const c = slot.querySelector('.seat-commander').value;
-    return p && c;
-  });
-  const btn = document.getElementById('setup-start-btn');
-  if (!btn) return;
-  btn.disabled = !allFilled;
-  btn.classList.toggle('opacity-50', !allFilled);
-  btn.classList.toggle('cursor-not-allowed', !allFilled);
-}
-
 document.querySelectorAll('.count-btn').forEach(btn => {
-  btn.addEventListener('click', () => initSetupSlots(parseInt(btn.dataset.count)));
-});
-document.querySelectorAll('.seat-player, .seat-commander').forEach(sel => {
-  sel.addEventListener('change', validateSetup);
+  btn.addEventListener('click', () => changePlayerCount(window._liveState, parseInt(btn.dataset.count)));
 });
 
 // Resume banner
@@ -417,30 +374,12 @@ document.getElementById('discard-btn').addEventListener('click', () => {
 });
 
 document.getElementById('setup-start-btn')?.addEventListener('click', () => {
-  const slots = Array.from(document.querySelectorAll('.seat-slot'))
-    .slice(0, selectedCount)
-    .map(slot => {
-      const pId = parseInt(slot.querySelector('.seat-player').value);
-      const cId = parseInt(slot.querySelector('.seat-commander').value);
-      const player = PLAYERS.find(p => p.id === pId);
-      const commander = COMMANDERS.find(c => c.id === cId);
-      return {
-        playerId: pId,
-        playerName: player?.name ?? '',
-        commanderId: cId,
-        commanderName: commander?.name ?? '',
-        hp: 40,
-        solRing: false,
-        eliminated: false,
-        turnEliminated: null,
-      };
-    });
-  const state = makeInitialState(selectedCount, slots);
-  saveState(state);
+  const state = window._liveState;
+  if (!state || state.phase !== 'setup') return;
   enterPlay(state, true);
 });
 
-initSetupSlots(4);
+initSetupPhase(4);
 
 // ── Grid layout config ─────────────────────────────────────────
 const LAYOUT_CONFIG = {
