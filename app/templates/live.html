@@ -268,13 +268,15 @@ function initSetupSlots(count) {
     slot.classList.toggle('hidden', i >= count);
   });
   document.querySelectorAll('.seat-player').forEach(sel => {
-    if (!sel.innerHTML.includes('<option value="') || sel.innerHTML.trim() === '<option value="">— Giocatore —</option>') {
+    if (!sel.dataset.populated) {
       sel.innerHTML = playerOptions(null);
+      sel.dataset.populated = '1';
     }
   });
   document.querySelectorAll('.seat-commander').forEach(sel => {
-    if (!sel.innerHTML.includes('<option value="') || sel.innerHTML.trim() === '<option value="">— Commander —</option>') {
+    if (!sel.dataset.populated) {
       sel.innerHTML = commanderOptions(null);
+      sel.dataset.populated = '1';
     }
   });
   validateSetup();
@@ -438,6 +440,7 @@ function startSorteggio(state) {
         tiles.forEach(t => t.classList.remove('sorteggio-highlight'));
         state.firstPlayerIndex = winnerIdx;
         saveState(state);
+        document.getElementById('play-grid').style.pointerEvents = '';
         bindPlayInteractions(state);
       }, 900);
       return;
@@ -449,11 +452,6 @@ function startSorteggio(state) {
   }
 
   document.getElementById('play-grid').style.pointerEvents = 'none';
-  const animDuration = totalFast * 80 + slowExtra * 140 + 900 + 200;
-  setTimeout(() => {
-    document.getElementById('play-grid').style.pointerEvents = '';
-  }, animDuration);
-
   tick();
 }
 
@@ -471,7 +469,8 @@ function changeHp(state, slotIdx, delta) {
 
 function setHp(state, slotIdx, value) {
   if (state.slots[slotIdx].eliminated) return;
-  state.slots[slotIdx].hp = parseInt(value) || 0;
+  const parsed = parseInt(value);
+  state.slots[slotIdx].hp = isNaN(parsed) ? state.slots[slotIdx].hp : parsed;
   updateTileHp(state, slotIdx);
   checkElimination(state, slotIdx);
   saveState(state);
@@ -729,6 +728,7 @@ function endGame(state) {
 }
 
 document.getElementById('end-game-btn').addEventListener('click', () => {
+  if (!window._liveState) return;
   endGame(window._liveState);
 });
 
