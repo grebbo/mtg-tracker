@@ -221,6 +221,7 @@
 const PLAYERS    = {{ players_json | tojson }};
 const COMMANDERS = {{ commanders_json | tojson }};
 const STATE_KEY  = 'mtg_live_game';
+window._liveInteractionsBound = false;
 
 // ── State helpers ──────────────────────────────────────────────
 function getState() {
@@ -531,6 +532,9 @@ document.getElementById('hp-input-cancel').addEventListener('click', () => {
 
 function bindPlayInteractions(state) {
   window._liveState = state;
+  if (window._liveInteractionsBound) return;
+  window._liveInteractionsBound = true;
+
   const grid = document.getElementById('play-grid');
 
   grid.addEventListener('pointerdown', e => {
