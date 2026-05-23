@@ -387,24 +387,47 @@ function buildGrid(state) {
   grid.style.gridTemplateColumns = cfg.cols;
   grid.innerHTML = '';
 
-  state.slots.forEach((slot, i) => {
+  state.slots.slice(0, state.playerCount).forEach((slot, i) => {
     const [row, col, rowSpan, colSpan, rotate] = cfg.slots[i];
     const tile = document.createElement('div');
-    tile.className = 'tile' + (slot.eliminated ? ' eliminated' : '');
+    const bg = slot.color || '#0a0a0a';
+    const fg = slot.color ? textColor(slot.color) : '#f1f5f9';
+    tile.className = 'tile' + (slot.eliminated ? ' eliminated' : '') + (!slot.confirmed ? ' tile-editing' : '');
     tile.dataset.slot = i;
     tile.dataset.rotate = rotate;
     tile.style.gridRow = `${row} / span ${rowSpan}`;
     tile.style.gridColumn = `${col} / span ${colSpan}`;
+    tile.style.background = bg;
+    tile.style.color = fg;
+
+    const swatchesHtml = TILE_COLORS.map(c =>
+      `<button class="color-swatch${c === bg ? ' selected' : ''}" data-color="${c}" data-slot="${i}" style="background:${c}" title="${c}"></button>`
+    ).join('');
 
     tile.innerHTML = `
       <div class="tile-inner">
         <div class="tile-content" style="transform:rotate(${rotate}deg)">
-          <div class="tile-corner">
-            <button class="sol-btn ${slot.solRing ? 'sol-active' : ''}" data-slot="${i}" title="Sol Ring T1">🪙</button>
-            <button class="edit-btn" data-slot="${i}" title="Modifica">✏</button>
+
+          <div class="tile-play-content">
+            <div class="tile-corner">
+              <button class="sol-btn${slot.solRing ? ' sol-active' : ''}" data-slot="${i}" title="Sol Ring T1">🪙</button>
+              <button class="edit-btn" data-slot="${i}" title="Modifica">✏</button>
+            </div>
+            <div class="tile-hp" data-slot="${i}">${slot.hp}</div>
+            <div class="tile-name">${esc(slot.playerName)} · ${esc(slot.commanderName)}</div>
           </div>
-          <div class="tile-hp" data-slot="${i}">${slot.hp}</div>
-          <div class="tile-name">${esc(slot.playerName)} · ${esc(slot.commanderName)}</div>
+
+          <div class="tile-edit-content">
+            <select class="tile-sel tile-player-sel" data-slot="${i}">
+              ${playerOptions(slot.playerId)}
+            </select>
+            <select class="tile-sel tile-commander-sel" data-slot="${i}">
+              ${commanderOptions(slot.commanderId)}
+            </select>
+            <div class="tile-swatches" data-slot="${i}">${swatchesHtml}</div>
+            <button class="tile-ok-btn" data-slot="${i}">OK</button>
+          </div>
+
         </div>
         <div class="tile-elim-overlay">✕</div>
       </div>`;
