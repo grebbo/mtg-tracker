@@ -194,7 +194,27 @@ function updateUI() {
 
 document.getElementById('addRowBtn').addEventListener('click', () => addRow());
 
-if (INIT_DATA.length) {
+const prefill = (() => {
+  try {
+    const raw = sessionStorage.getItem('mtg_prefill');
+    if (!raw) return null;
+    sessionStorage.removeItem('mtg_prefill');
+    return JSON.parse(raw);
+  } catch { return null; }
+})();
+
+if (prefill) {
+  const dateInput = document.querySelector('[name="date"]');
+  if (dateInput && prefill.date) dateInput.value = prefill.date;
+  prefill.rows.forEach(r => addRow({
+    player_id:       r.player_id,
+    commander_id:    r.commander_id,
+    is_winner:       r.is_winner,
+    sol_ring:        r.sol_ring,
+    turn_eliminated: r.turn_eliminated,
+  }));
+  syncWinnerUI();
+} else if (INIT_DATA.length) {
   INIT_DATA.forEach(d => addRow(d));
 } else {
   for (let i = 0; i < 4; i++) addRow();
