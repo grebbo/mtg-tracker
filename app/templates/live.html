@@ -289,7 +289,7 @@ function validateSetup() {
     const c = slot.querySelector('.seat-commander').value;
     return p && c;
   });
-  const btn = document.getElementById('start-btn');
+  const btn = document.getElementById('setup-start-btn');
   if (!btn) return;
   btn.disabled = !allFilled;
   btn.classList.toggle('opacity-50', !allFilled);
@@ -306,17 +306,17 @@ document.querySelectorAll('.seat-player, .seat-commander').forEach(sel => {
 // Resume banner
 const saved = getState();
 if (saved && saved.phase === 'play') {
-  document.getElementById('resume-banner').classList.remove('hidden');
+  document.getElementById('resume-banner').style.display = 'block';
 }
 document.getElementById('resume-btn').addEventListener('click', () => {
   enterPlay(getState());
 });
 document.getElementById('discard-btn').addEventListener('click', () => {
   clearState();
-  document.getElementById('resume-banner').classList.add('hidden');
+  document.getElementById('resume-banner').style.display = 'none';
 });
 
-document.getElementById('start-btn')?.addEventListener('click', () => {
+document.getElementById('setup-start-btn')?.addEventListener('click', () => {
   const slots = Array.from(document.querySelectorAll('.seat-slot'))
     .slice(0, selectedCount)
     .map(slot => {
@@ -604,20 +604,19 @@ function bindPlayInteractions(state) {
 let editSlotIdx = null;
 
 function openEditModal(state, slotIdx) {
+  const pSel = document.getElementById('edit-player-sel');
+  const cSel = document.getElementById('edit-commander-sel');
+  const modal = document.getElementById('edit-modal');
+  if (!pSel || !cSel || !modal) return;
   editSlotIdx = slotIdx;
   const slot = state.slots[slotIdx];
-
-  const pSel = document.getElementById('edit-player-sel');
   pSel.innerHTML = PLAYERS.map(p =>
     `<option value="${p.id}" ${p.id===slot.playerId?'selected':''}>${esc(p.name)}</option>`
   ).join('');
-
-  const cSel = document.getElementById('edit-commander-sel');
   cSel.innerHTML = COMMANDERS.map(c =>
     `<option value="${c.id}" ${c.id===slot.commanderId?'selected':''}>${esc(c.name)} (${esc(c.color_identity)})</option>`
   ).join('');
-
-  document.getElementById('edit-modal').classList.add('open');
+  modal.classList.add('open');
 }
 
 
