@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#0f1117"/>
+  <!-- Purple pentagon (MTG 5-color symbol shape) -->
+  <polygon points="256,60 420,180 360,380 152,380 92,180" fill="none" stroke="#7c3aed" stroke-width="22" stroke-linejoin="round"/>
+  <!-- Sword icon -->
+  <line x1="256" y1="130" x2="256" y2="360" stroke="#e2e8f0" stroke-width="20" stroke-linecap="round"/>
+  <line x1="200" y1="230" x2="312" y2="230" stroke="#e2e8f0" stroke-width="14" stroke-linecap="round"/>
+  <polygon points="256,120 244,155 268,155" fill="#7c3aed"/>
+  <!-- Accent dot -->
+  <circle cx="256" cy="370" r="10" fill="#7c3aed"/>
+</svg>

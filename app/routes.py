@@ -173,6 +173,22 @@ def _compute_finish_ranks(winner_idx, slot_data):
     return finishes
 
 
+# ── PWA service worker ────────────────────────────────────────────────────────
+
+@main.route('/sw.js')
+def service_worker():
+    """Serve service worker from root scope so it controls the whole app."""
+    import os
+    sw_path = os.path.join(current_app.root_path, 'static', 'sw.js')
+    response = current_app.make_response(
+        open(sw_path, 'r', encoding='utf-8').read()
+    )
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
+
 # ── dashboard ─────────────────────────────────────────────────────────────────
 
 @main.route('/')
