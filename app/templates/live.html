@@ -27,10 +27,10 @@
     width: 100%; height: 100%;
   }
 
-  /* edit content */
+  /* edit content — full-tile centering wrapper */
   .tile-edit-content {
     display: none; flex-direction: column; align-items: center; justify-content: center;
-    gap: 0.4rem; padding: 0.5rem; width: 100%; height: 100%; overflow-y: auto;
+    width: 100%; height: 100%;
     touch-action: auto; pointer-events: auto;
   }
 
@@ -38,45 +38,75 @@
   .tile.tile-editing .tile-play-content { display: none; }
   .tile.tile-editing .tile-edit-content { display: flex; }
 
+  /* dark card inside the tile */
+  .tile-edit-card {
+    display: flex; flex-direction: column; gap: 0.5rem;
+    background: #1a1d27; border: 1px solid #2d3147; border-radius: 0.75rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    padding: 0.9rem; width: min(88%, 21rem);
+    touch-action: auto; pointer-events: auto;
+  }
+
   /* color swatches */
-  .tile-swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem; margin: 0.2rem 0; }
+  .tile-swatches {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem;
+    margin-top: 0.35rem; margin-bottom: 0.35rem;
+  }
   .color-swatch {
-    width: 1.1rem; height: 1.1rem; border-radius: 50%;
+    width: 1.2rem; height: 1.2rem; border-radius: 50%;
     cursor: pointer; border: 2px solid transparent; padding: 0;
   }
-  .color-swatch.selected { border-color: currentColor; }
+  .color-swatch.selected { border-color: #f1f5f9; }
 
-  /* tile edit selects and OK button */
+  /* selects — dark app style */
   .tile-sel {
-    font-size: clamp(0.6rem, 2vw, 0.8rem); max-width: 90%;
-    background: rgba(0,0,0,0.4); color: inherit;
-    border: 1px solid rgba(255,255,255,0.2); border-radius: 0.35rem; padding: 0.2rem 0.3rem;
+    width: 100%; font-size: 0.75rem;
+    background: #0f1117; color: #f1f5f9;
+    border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem 0.5rem;
     touch-action: auto; pointer-events: auto; user-select: auto;
   }
+
+  /* OK button — violet like start button */
   .tile-ok-btn {
-    margin-top: 0.2rem; padding: 0.25rem 1.2rem;
-    background: rgba(255,255,255,0.15); color: inherit;
-    border: 1px solid rgba(255,255,255,0.3); border-radius: 0.4rem;
-    font-size: clamp(0.65rem, 2vw, 0.85rem); font-weight: 700; cursor: pointer;
+    width: 100%; padding: 0.4rem;
+    background: #7c3aed; color: #fff;
+    border: none; border-radius: 0.5rem;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer;
   }
-  .tile-ok-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .tile-ok-btn:hover:not(:disabled) { background: #6d28d9; }
+  .tile-ok-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .tile-hp {
     font-size: clamp(2.5rem, 10vw, 5.5rem);
     font-weight: 900;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    color: #f1f5f9;
     transition: color 0.2s;
   }
-  .tile.eliminated .tile-hp { color: #475569; }
-  .tile-name { font-size: clamp(0.55rem, 2vw, 0.85rem); color: #64748b; margin-top: 0.35rem; letter-spacing: 0.05em; text-transform: uppercase; }
-  .tile-corner { position: absolute; top: 0.4rem; left: 0.4rem; display: flex; gap: 0.35rem; z-index: 10; }
-  .tile-corner button {
-    background: transparent; border: none; font-size: clamp(0.75rem, 2.5vw, 1rem);
-    cursor: pointer; opacity: 0.4; padding: 0.2rem; line-height: 1;
+  .tile.eliminated .tile-hp { opacity: 0.4; }
+  .tile-name { font-size: clamp(0.7rem, 2.5vw, 1.1rem); margin-top: 0.35rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; opacity: 0.7; }
+  .tile-corner { position: absolute; z-index: 10; }
+  .tile.tile-editing .tile-corner { display: none; }
+  .corner-tl { top: 0.5rem; left: 0.5rem; }
+  .corner-tr { top: 0.5rem; right: 0.5rem; }
+  .corner-bl { bottom: 0.5rem; left: 0.5rem; }
+  .corner-br { bottom: 0.5rem; right: 0.5rem; }
+  .edit-btn {
+    width: clamp(1.8rem, 5vw, 2.2rem); height: clamp(1.8rem, 5vw, 2.2rem);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.5); border: 1.5px solid rgba(255,255,255,0.3);
+    font-size: clamp(0.8rem, 2.5vw, 1.05rem); cursor: pointer;
+    backdrop-filter: blur(4px);
   }
-  .tile-corner button.sol-active { opacity: 1; }
-  .tile-corner button:hover { opacity: 0.9; }
+  .edit-btn:hover { background: rgba(0,0,0,0.75); border-color: rgba(255,255,255,0.6); }
+  .tile-sol-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    color: #94a3b8; font-size: 0.75rem; cursor: pointer;
+    padding-top: 0.1rem;
+  }
+  .tile-sol-row input[type="checkbox"] {
+    cursor: pointer; accent-color: #7c3aed; width: 0.9rem; height: 0.9rem;
+    touch-action: auto; pointer-events: auto;
+  }
   .tile-elim-overlay {
     display: none; position: absolute; inset: 0;
     align-items: center; justify-content: center;
@@ -307,9 +337,10 @@ function handleTileOk(state, slotIdx) {
   slot.playerName    = player?.name ?? '';
   slot.commanderId   = cId;
   slot.commanderName = commander?.name ?? '';
+  slot.solRing       = tile.querySelector('.tile-sol-check').checked;
   slot.confirmed     = true;
   tile.querySelector('.tile-hp').textContent   = slot.hp;
-  tile.querySelector('.tile-name').textContent = `${slot.playerName} · ${slot.commanderName}`;
+  tile.querySelector('.tile-name').textContent = slot.playerName;
   tile.classList.remove('tile-editing');
   saveState(state);
   if (state.phase === 'setup') updateStartBtn(state);
@@ -321,6 +352,7 @@ function setTileEditMode(state, slotIdx) {
   const slot = state.slots[slotIdx];
   tile.querySelector('.tile-player-sel').value    = slot.playerId   ?? '';
   tile.querySelector('.tile-commander-sel').value = slot.commanderId ?? '';
+  tile.querySelector('.tile-sol-check').checked   = slot.solRing ?? false;
   tile.querySelectorAll('.color-swatch').forEach(s => {
     s.classList.toggle('selected', s.dataset.color === slot.color);
   });
@@ -434,6 +466,16 @@ if (saved && saved.phase === 'play') {
   initSetupPhase(4);
 }
 
+// ── Corner position helper ─────────────────────────────────────
+function cornerClass(col, totalCols, rotate) {
+  if (rotate === 90)  return 'corner-tl'; // right-side player → inner edge = left
+  if (rotate === 270) return 'corner-tr'; // left-side player  → inner edge = right
+  const isLeft = col <= Math.floor(totalCols / 2);
+  if (rotate === 0)   return isLeft ? 'corner-tl' : 'corner-tr'; // bottom tiles
+  if (rotate === 180) return isLeft ? 'corner-bl' : 'corner-br'; // top tiles
+  return 'corner-tl';
+}
+
 // ── Build play grid ────────────────────────────────────────────
 function buildGrid(state) {
   const cfg = LAYOUT_CONFIG[state.playerCount];
@@ -441,6 +483,8 @@ function buildGrid(state) {
   grid.style.gridTemplateRows = cfg.rows;
   grid.style.gridTemplateColumns = cfg.cols;
   grid.innerHTML = '';
+
+  const totalCols = cfg.cols.split(' ').length;
 
   state.slots.slice(0, state.playerCount).forEach((slot, i) => {
     const [row, col, rowSpan, colSpan, rotate] = cfg.slots[i];
@@ -459,30 +503,37 @@ function buildGrid(state) {
       `<button class="color-swatch${c === bg ? ' selected' : ''}" data-color="${c}" data-slot="${i}" style="background:${c}" title="${c}"></button>`
     ).join('');
 
+    const crnr = cornerClass(col, totalCols, rotate);
+
     tile.innerHTML = `
       <div class="tile-inner">
         <div class="tile-content" style="transform:rotate(${rotate}deg)">
 
           <div class="tile-play-content">
-            <div class="tile-corner">
-              <button class="sol-btn${slot.solRing ? ' sol-active' : ''}" data-slot="${i}" title="Sol Ring T1">🪙</button>
-              <button class="edit-btn" data-slot="${i}" title="Modifica">✏</button>
-            </div>
             <div class="tile-hp" data-slot="${i}">${slot.hp}</div>
-            <div class="tile-name">${esc(slot.playerName)} · ${esc(slot.commanderName)}</div>
+            <div class="tile-name">${esc(slot.playerName)}</div>
           </div>
 
           <div class="tile-edit-content">
-            <select class="tile-sel tile-player-sel" data-slot="${i}">
-              ${playerOptions(slot.playerId)}
-            </select>
-            <select class="tile-sel tile-commander-sel" data-slot="${i}">
-              ${commanderOptions(slot.commanderId)}
-            </select>
-            <div class="tile-swatches" data-slot="${i}">${swatchesHtml}</div>
-            <button class="tile-ok-btn" data-slot="${i}">OK</button>
+            <div class="tile-edit-card">
+              <select class="tile-sel tile-player-sel" data-slot="${i}">
+                ${playerOptions(slot.playerId)}
+              </select>
+              <select class="tile-sel tile-commander-sel" data-slot="${i}">
+                ${commanderOptions(slot.commanderId)}
+              </select>
+              <div class="tile-swatches" data-slot="${i}">${swatchesHtml}</div>
+              <label class="tile-sol-row">
+                <input type="checkbox" class="tile-sol-check" data-slot="${i}" ${slot.solRing ? 'checked' : ''}>
+                <span>🪙 Sol Ring T1</span>
+              </label>
+              <button class="tile-ok-btn" data-slot="${i}">OK</button>
+            </div>
           </div>
 
+        </div>
+        <div class="tile-corner ${crnr}">
+          <button class="edit-btn" data-slot="${i}" title="Modifica">✏</button>
         </div>
         <div class="tile-elim-overlay">✕</div>
       </div>`;

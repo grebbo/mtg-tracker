@@ -17,6 +17,10 @@ La home page aggrega tutte le statistiche del gruppo:
 - **Statistiche sulla durata**: turni medi, mediana, minimo e massimo (con info sul vincitore della partita più lunga/corta)
 - **Ultime 5 partite**
 
+### Live Counter
+
+→ vedi sezione dedicata più in basso.
+
 ### Registrazione partite
 
 Form per inserire una nuova partita con supporto da 2 a 6 giocatori. Per ogni giocatore si registrano:
@@ -49,6 +53,35 @@ Pagina dedicata alla gestione del roster di commander con:
 - Identità di colore con nomi MTG (es. `UBR` → Grixis)
 - Statistiche per commander: partite, vittorie, kill, win rate
 - Protezione da eliminazione se il commander ha partite registrate
+
+### Live Counter
+
+Segnapunti fullscreen per giocare dal vivo, accessibile da `/live`.
+
+**Setup inline:**
+- La griglia dei giocatori è visibile da subito con il layout finale (tile già ruotate verso ogni giocatore)
+- Ogni tile mostra un form di configurazione direttamente al suo interno: selezione giocatore, commander, colore di sfondo, Sol Ring T1
+- Il pannello centrale permette di scegliere il numero di giocatori (2–6); il bottone "Inizia Partita" si attiva solo quando tutti i giocatori hanno confermato la propria tile
+- Se esiste una partita salvata non terminata, viene proposto un banner di ripresa
+
+**Layout orizzontale (ottimizzato per dispositivi in landscape):**
+
+| Giocatori | Disposizione |
+|---|---|
+| 2 | Sopra (180°) + sotto (0°) |
+| 3 | 2 speculari sinistra top/bottom + 1 destra full-height (270°) |
+| 4 | 2×2 simmetrico |
+| 5 | 2×2 a sinistra + 1 destra full-height (270°) |
+| 6 | 1 sinistra full-height (90°) + 2×2 centro + 1 destra full-height (270°) |
+
+**Fase di gioco:**
+- Tap metà sinistra/destra della tile → ±1 PV
+- Pressione lunga → input numerico libero
+- Pulsante ✏ (angolo esterno della tile, posizione adattiva) → modifica giocatore/commander/colore in-play
+- Centro schermo: contatore turni con −/+; pressione lunga sul numero → compare "⌂ Home" (esce dal fullscreen) e "Termina partita"
+- Tile eliminata (PV ≤ 0): opacità ridotta, registrazione automatica del turno
+
+**Handoff:** al termine partita i dati vengono scritti in `sessionStorage` e `/game/new` li usa per pre-compilare il form.
 
 ### Import / Export Excel
 
